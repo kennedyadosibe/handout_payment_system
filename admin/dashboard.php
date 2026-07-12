@@ -82,6 +82,7 @@ $stats = [
     'paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
     'recorded_unpaid' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
 ];
+$studentSearch = trim($_GET['student_name'] ?? '');
 $revenueByHandout = $pdo->query('SELECT handout_id, course_code_snapshot, handout_title_snapshot,
         COUNT(*) AS paid_count,
         COALESCE(SUM(price_snapshot), 0) AS total_revenue
@@ -89,11 +90,19 @@ $revenueByHandout = $pdo->query('SELECT handout_id, course_code_snapshot, handou
     WHERE payment_status = "paid"
     GROUP BY handout_id, course_code_snapshot, handout_title_snapshot
     ORDER BY course_code_snapshot, handout_title_snapshot')->fetchAll();
-$paidRows = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone
+$paidSql = 'SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
-    WHERE o.payment_status = "paid"
-    ORDER BY o.course_code_snapshot, o.handout_title_snapshot, s.full_name')->fetchAll();
+    WHERE o.payment_status = "paid"';
+$paidParams = [];
+if ($studentSearch !== '') {
+    $paidSql .= ' AND s.full_name LIKE ?';
+    $paidParams[] = '%' . $studentSearch . '%';
+}
+$paidSql .= ' ORDER BY o.course_code_snapshot, o.handout_title_snapshot, s.full_name';
+$stmt = $pdo->prepare($paidSql);
+$stmt->execute($paidParams);
+$paidRows = $stmt->fetchAll();
 $paidByHandout = [];
 foreach ($paidRows as $row) {
     $key = $row['course_code_snapshot'] . '|' . $row['handout_title_snapshot'];
@@ -173,6 +182,21 @@ page_header('Admin Dashboard');
             </div>
             <a class="btn btn-sm btn-outline-primary align-self-md-start" href="/Handout%20Payment%20System/admin/orders/index.php">Open paid list</a>
         </div>
+        <form class="row g-3 align-items-end mb-4" method="get">
+            <div class="col-md-8">
+                <label class="form-label" for="student_name">Search student name</label>
+                <input class="form-control" id="student_name" name="student_name" value="<?= h($studentSearch) ?>" placeholder="Enter student name">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button class="btn btn-primary flex-fill" type="submit">Search</button>
+                <?php if ($studentSearch !== ''): ?>
+                    <a class="btn btn-outline-secondary" href="/Handout%20Payment%20System/admin/dashboard.php">Clear</a>
+                <?php endif; ?>
+            </div>
+        </form>
+        <?php if ($studentSearch !== ''): ?>
+            <div class="alert alert-info">Showing paid students matching "<?= h($studentSearch) ?>".</div>
+        <?php endif; ?>
         <?php foreach ($paidByHandout as $group): ?>
             <section class="paid-group border rounded-2 p-3 mb-3">
                 <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
@@ -227,7 +251,7 @@ page_header('Admin Dashboard');
             </section>
         <?php endforeach; ?>
         <?php if (!$paidByHandout): ?>
-            <div class="alert alert-info mb-0">No paid orders have been recorded yet.</div>
+            <div class="alert alert-info mb-0"><?= $studentSearch !== '' ? 'No paid students match that name.' : 'No paid orders have been recorded yet.' ?></div>
         <?php endif; ?>
     </div>
 </main>
