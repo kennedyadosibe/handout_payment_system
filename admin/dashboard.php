@@ -5,6 +5,46 @@ require_once __DIR__ . '/../app/layout.php';
 
 $admin = require_admin();
 $pdo = db();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    $orderId = (int) ($_POST['order_id'] ?? 0);
+
+    if ($action === 'delete_paid_order') {
+        $stmt = $pdo->prepare('SELECT o.*, s.full_name
+            FROM orders o
+            JOIN students s ON s.student_id = o.student_id
+            WHERE o.order_id = ?');
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+
+        if (!$order || $order['payment_status'] !== 'paid') {
+            flash('Paid student record not found.', 'warning');
+            redirect('/Handout%20Payment%20System/admin/dashboard.php');
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('DELETE FROM payments WHERE order_id = ?');
+            $stmt->execute([$orderId]);
+
+            $stmt = $pdo->prepare('DELETE FROM orders WHERE order_id = ?');
+            $stmt->execute([$orderId]);
+
+            $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$admin['admin_id'], 'delete paid student from dashboard handout group', 'orders', $order['order_reference']]);
+
+            $pdo->commit();
+            flash($order['full_name'] . ' has been deleted from the handout paid list.');
+        } catch (Throwable $exception) {
+            $pdo->rollBack();
+            flash('Student could not be deleted from the handout paid list. Please try again.', 'danger');
+        }
+
+        redirect('/Handout%20Payment%20System/admin/dashboard.php');
+    }
+}
+
 $stats = [
     'total_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts')->fetchColumn(),
     'available_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn(),
@@ -92,6 +132,7 @@ page_header('Admin Dashboard');
                                 <th>Phone</th>
                                 <th>Amount</th>
                                 <th>Collection</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -102,6 +143,12 @@ page_header('Admin Dashboard');
                                     <td><?= h($student['phone']) ?></td>
                                     <td><?= money($student['price_snapshot']) ?></td>
                                     <td><?= status_badge($student['collection_status']) ?></td>
+                                    <td class="text-end">
+                                        <form method="post" onsubmit="return confirm('Delete this student from this handout paid list after giving the handout?');">
+                                            <input type="hidden" name="order_id" value="<?= (int) $student['order_id'] ?>">
+                                            <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
+                                        </form>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
