@@ -20,6 +20,7 @@
 - Grouped paid students on the admin dashboard by handout.
 - Added delete action for paid students directly inside dashboard handout groups.
 - Added dashboard `Given` action that strikes through collected students without reducing revenue.
+- Added dashboard revenue totals grouped by handout.
 
 ### Checks Performed
 
@@ -39,6 +40,7 @@
 - Ran PHP syntax checks, created temporary paid rows for two handouts, verified the dashboard groups students under the correct handout sections, and cleaned up the temporary records.
 - Ran PHP syntax checks, created a temporary paid row, verified dashboard Delete buttons are present, executed the dashboard delete handler, confirmed the temporary row was removed, and cleaned up the temporary student record.
 - Ran PHP syntax checks, created a temporary paid row, marked it as Given, confirmed revenue stayed unchanged, verified the dashboard row uses strikethrough styling, and cleaned up the temporary record.
+- Ran PHP syntax checks, created temporary paid rows for two handouts, confirmed dashboard revenue cards are split by handout and no global revenue card appears in the top stats, then cleaned up the temporary records.
 
 ### Blockers
 

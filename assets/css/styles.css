@@ -173,6 +173,12 @@ body {
     box-shadow: 0 .5rem 1.25rem rgba(23, 100, 216, .11);
 }
 
+.revenue-card {
+    background:
+        radial-gradient(circle at 88% 18%, rgba(142, 197, 255, .42) 0 2px, transparent 3px),
+        linear-gradient(180deg, #f7fbff, #ecf5ff) !important;
+}
+
 .paid-group {
     background:
         radial-gradient(circle at 96% 12%, rgba(142, 197, 255, .35) 0 2px, transparent 3px),

@@ -81,8 +81,14 @@ $stats = [
     'available_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn(),
     'paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
     'recorded_unpaid' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
-    'revenue' => (float) $pdo->query('SELECT COALESCE(SUM(price_snapshot), 0) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
 ];
+$revenueByHandout = $pdo->query('SELECT handout_id, course_code_snapshot, handout_title_snapshot,
+        COUNT(*) AS paid_count,
+        COALESCE(SUM(price_snapshot), 0) AS total_revenue
+    FROM orders
+    WHERE payment_status = "paid"
+    GROUP BY handout_id, course_code_snapshot, handout_title_snapshot
+    ORDER BY course_code_snapshot, handout_title_snapshot')->fetchAll();
 $paidRows = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
@@ -122,7 +128,6 @@ page_header('Admin Dashboard');
             'Available' => $stats['available_handouts'],
             'Paid orders' => $stats['paid_orders'],
             'Saved incomplete details' => $stats['recorded_unpaid'],
-            'Revenue' => money($stats['revenue']),
         ] as $label => $value): ?>
             <div class="col-md">
                 <div class="card dashboard-card">
@@ -133,6 +138,32 @@ page_header('Admin Dashboard');
                 </div>
             </div>
         <?php endforeach; ?>
+    </div>
+    <div class="bg-white border rounded-2 p-4 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+            <div>
+                <h2 class="h4 mb-1">Revenue by handout</h2>
+                <p class="text-muted mb-0">Each handout keeps its own revenue total.</p>
+            </div>
+            <a class="btn btn-sm btn-outline-primary align-self-md-start" href="/Handout%20Payment%20System/admin/orders/index.php">Open paid list</a>
+        </div>
+        <div class="row g-3">
+            <?php foreach ($revenueByHandout as $revenue): ?>
+                <div class="col-md-4">
+                    <div class="card dashboard-card revenue-card h-100">
+                        <div class="card-body">
+                            <div class="text-muted small"><?= h($revenue['course_code_snapshot']) ?></div>
+                            <h3 class="h6 mb-3"><?= h($revenue['handout_title_snapshot']) ?></h3>
+                            <div class="h3 mb-1"><?= money($revenue['total_revenue']) ?></div>
+                            <div class="text-muted small"><?= (int) $revenue['paid_count'] ?> paid student<?= (int) $revenue['paid_count'] === 1 ? '' : 's' ?></div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php if (!$revenueByHandout): ?>
+            <div class="alert alert-info mb-0">No paid revenue has been recorded yet.</div>
+        <?php endif; ?>
     </div>
     <div class="bg-white border rounded-2 p-4">
         <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
