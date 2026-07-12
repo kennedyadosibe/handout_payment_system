@@ -168,9 +168,12 @@ body {
 }
 
 .dashboard-card {
-    border: 0;
+    background:
+        radial-gradient(circle at 90% 18%, rgba(142, 197, 255, .5) 0 2px, transparent 3px),
+        linear-gradient(180deg, #f1f8ff 0%, #e5f2ff 100%) !important;
+    border: 1px solid rgba(23, 100, 216, .18) !important;
     border-radius: .5rem;
-    box-shadow: 0 .5rem 1.25rem rgba(23, 100, 216, .11);
+    box-shadow: 0 .5rem 1.25rem rgba(23, 100, 216, .14);
 }
 
 .dashboard-shell {
@@ -182,17 +185,19 @@ body {
 
 .dashboard-sidebar {
     background:
-        radial-gradient(circle at 88% 12%, rgba(142, 197, 255, .38) 0 2px, transparent 3px),
-        rgba(247, 251, 255, .9);
-    border: 1px solid var(--line);
+        radial-gradient(circle at 86% 13%, rgba(255, 255, 255, .7) 0 2px, transparent 3px),
+        radial-gradient(circle at 18% 82%, rgba(142, 197, 255, .5) 0 2px, transparent 3px),
+        linear-gradient(160deg, #1764d8 0%, #0f4fa8 48%, #0b3d82 100%);
+    border: 1px solid rgba(142, 197, 255, .55);
     border-radius: .5rem;
+    box-shadow: 0 1rem 2.2rem rgba(11, 61, 130, .22);
     padding: 1rem;
     position: sticky;
     top: 1rem;
 }
 
 .sidebar-label {
-    color: #667085;
+    color: rgba(255, 255, 255, .72);
     font-size: .78rem;
     font-weight: 800;
     letter-spacing: 0;
@@ -206,7 +211,7 @@ body {
     background: transparent;
     border: 1px solid transparent;
     border-radius: .45rem;
-    color: var(--ink);
+    color: rgba(255, 255, 255, .88);
     display: flex;
     justify-content: space-between;
     min-height: 44px;
@@ -219,15 +224,16 @@ body {
 .dashboard-nav-item:hover,
 .dashboard-nav-link:hover,
 .dashboard-nav-item.active {
-    background: var(--blue-soft);
-    border-color: rgba(23, 100, 216, .24);
-    color: #0f4fa8;
+    background: rgba(255, 255, 255, .16);
+    border-color: rgba(255, 255, 255, .36);
+    color: #fff;
 }
 
 .dashboard-nav-item strong {
-    background: #dcecff;
+    background: rgba(255, 255, 255, .18);
+    border: 1px solid rgba(255, 255, 255, .24);
     border-radius: 999px;
-    color: #0b3d82;
+    color: #fff;
     font-size: .78rem;
     min-width: 2rem;
     padding: .16rem .45rem;
@@ -237,6 +243,14 @@ body {
 .dashboard-content,
 .dashboard-panel {
     min-width: 0;
+}
+
+.dashboard-content > .dashboard-panel > .bg-white {
+    background:
+        radial-gradient(circle at 92% 8%, rgba(142, 197, 255, .42) 0 2px, transparent 3px),
+        linear-gradient(180deg, #f1f8ff 0%, #e8f4ff 100%) !important;
+    border-color: rgba(23, 100, 216, .22) !important;
+    box-shadow: 0 .8rem 2rem rgba(23, 100, 216, .12);
 }
 
 .revenue-card {
