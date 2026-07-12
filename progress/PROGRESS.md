@@ -17,6 +17,7 @@
 - Simplified order payment status to only `paid` or `not_paid`.
 - Changed admin order views so the main list shows only paid students while incomplete payment details remain recorded.
 - Replaced simulated payment with Paystack transaction initialization and verification.
+- Grouped paid students on the admin dashboard by handout.
 
 ### Checks Performed
 
@@ -33,6 +34,7 @@
 - Ran the database migration, confirmed the orders status enum is only `not_paid` and `paid`, and verified the dashboard/orders pages no longer show pending payment.
 - Ran PHP syntax checks and verified in the browser that the admin paid list excludes incomplete-payment students and no longer shows a payment status filter or column.
 - Ran PHP syntax checks, confirmed Paystack initialization returns a `checkout.paystack.com` URL using temporary fake data, cleaned up the temporary records, and verified the payment page shows `Continue to Paystack` instead of simulator buttons.
+- Ran PHP syntax checks, created temporary paid rows for two handouts, verified the dashboard groups students under the correct handout sections, and cleaned up the temporary records.
 
 ### Blockers
 

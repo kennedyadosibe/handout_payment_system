@@ -173,6 +173,12 @@ body {
     box-shadow: 0 .5rem 1.25rem rgba(23, 100, 216, .11);
 }
 
+.paid-group {
+    background:
+        radial-gradient(circle at 96% 12%, rgba(142, 197, 255, .35) 0 2px, transparent 3px),
+        rgba(247, 251, 255, .72);
+}
+
 .table thead th {
     background: #dcecff;
     color: #0b3d82;

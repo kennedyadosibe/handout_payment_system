@@ -12,7 +12,25 @@ $stats = [
     'recorded_unpaid' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
     'revenue' => (float) $pdo->query('SELECT COALESCE(SUM(price_snapshot), 0) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
 ];
-$recent = $pdo->query('SELECT o.*, s.full_name FROM orders o JOIN students s ON s.student_id = o.student_id WHERE o.payment_status = "paid" ORDER BY o.ordered_at DESC LIMIT 8')->fetchAll();
+$paidRows = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone
+    FROM orders o
+    JOIN students s ON s.student_id = o.student_id
+    WHERE o.payment_status = "paid"
+    ORDER BY o.course_code_snapshot, o.handout_title_snapshot, s.full_name')->fetchAll();
+$paidByHandout = [];
+foreach ($paidRows as $row) {
+    $key = $row['course_code_snapshot'] . '|' . $row['handout_title_snapshot'];
+    if (!isset($paidByHandout[$key])) {
+        $paidByHandout[$key] = [
+            'course_code' => $row['course_code_snapshot'],
+            'title' => $row['handout_title_snapshot'],
+            'total' => 0.0,
+            'students' => [],
+        ];
+    }
+    $paidByHandout[$key]['total'] += (float) $row['price_snapshot'];
+    $paidByHandout[$key]['students'][] = $row;
+}
 
 page_header('Admin Dashboard');
 ?>
@@ -46,32 +64,52 @@ page_header('Admin Dashboard');
         <?php endforeach; ?>
     </div>
     <div class="bg-white border rounded-2 p-4">
-        <h2 class="h4">Recent paid orders</h2>
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Reference</th>
-                        <th>Student</th>
-                        <th>Handout</th>
-                        <th>Amount</th>
-                        <th>Collection</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($recent as $order): ?>
-                        <tr>
-                            <td><?= h($order['order_reference']) ?></td>
-                            <td><?= h($order['full_name']) ?></td>
-                            <td><?= h($order['course_code_snapshot']) ?></td>
-                            <td><?= money($order['price_snapshot']) ?></td>
-                            <td><?= status_badge($order['collection_status']) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+            <div>
+                <h2 class="h4 mb-1">Paid students by handout</h2>
+                <p class="text-muted mb-0">Students are grouped under the exact handout they paid for.</p>
+            </div>
+            <a class="btn btn-sm btn-outline-primary align-self-md-start" href="/Handout%20Payment%20System/admin/orders/index.php">Open paid list</a>
         </div>
-        <?php if (!$recent): ?>
+        <?php foreach ($paidByHandout as $group): ?>
+            <section class="paid-group border rounded-2 p-3 mb-3">
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                    <div>
+                        <span class="badge text-bg-secondary"><?= h($group['course_code']) ?></span>
+                        <h3 class="h5 mt-2 mb-0"><?= h($group['title']) ?></h3>
+                    </div>
+                    <div class="text-md-end">
+                        <div class="fw-bold"><?= count($group['students']) ?> student<?= count($group['students']) === 1 ? '' : 's' ?></div>
+                        <div class="text-muted small"><?= money($group['total']) ?> received</div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Index</th>
+                                <th>Phone</th>
+                                <th>Amount</th>
+                                <th>Collection</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($group['students'] as $student): ?>
+                                <tr>
+                                    <td><?= h($student['full_name']) ?></td>
+                                    <td><?= h($student['index_number']) ?></td>
+                                    <td><?= h($student['phone']) ?></td>
+                                    <td><?= money($student['price_snapshot']) ?></td>
+                                    <td><?= status_badge($student['collection_status']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        <?php endforeach; ?>
+        <?php if (!$paidByHandout): ?>
             <div class="alert alert-info mb-0">No paid orders have been recorded yet.</div>
         <?php endif; ?>
     </div>
