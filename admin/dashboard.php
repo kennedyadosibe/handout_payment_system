@@ -7,7 +7,7 @@ $admin = require_admin();
 $pdo = db();
 
 $dashboardBaseUrl = '/Handout%20Payment%20System/admin/dashboard.php';
-$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'manage-handouts', 'view-orders'];
+$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'manage-handouts', 'edit-handout', 'view-orders'];
 $returnPanel = $_POST['return_panel'] ?? 'overview';
 if (!in_array($returnPanel, $allowedReturnPanels, true)) {
     $returnPanel = 'overview';
@@ -75,6 +75,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             redirect($returnUrl);
         }
+    }
+
+    if ($action === 'save_handout') {
+        $data = [
+            trim($_POST['title'] ?? ''),
+            trim($_POST['course_code'] ?? ''),
+            trim($_POST['description'] ?? ''),
+            (float) ($_POST['current_price'] ?? 0),
+            $_POST['status'] ?? 'available',
+        ];
+        $saveUrl = $dashboardBaseUrl . '?panel=edit-handout';
+        if ($handoutId > 0) {
+            $saveUrl .= '&handout_id=' . $handoutId;
+        }
+
+        if ($data[0] === '' || $data[1] === '' || $data[2] === '' || $data[3] <= 0 || !in_array($data[4], ['available', 'unavailable', 'archived'], true)) {
+            flash('Please complete all fields with a valid price.', 'danger');
+            redirect($saveUrl);
+        }
+
+        if ($handoutId > 0) {
+            $stmt = $pdo->prepare('UPDATE handouts SET title = ?, course_code = ?, description = ?, current_price = ?, status = ? WHERE handout_id = ?');
+            $stmt->execute([...$data, $handoutId]);
+            flash('Handout updated.');
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO handouts (title, course_code, description, current_price, status, created_by) VALUES (?, ?, ?, ?, ?, ?)');
+            $stmt->execute([...$data, $admin['admin_id']]);
+            flash('Handout added.');
+        }
+
+        redirect($dashboardBaseUrl . '?panel=manage-handouts');
     }
 
     if ($action === 'delete_paid_order') {
@@ -162,6 +193,17 @@ $stats = [
     'paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
     'recorded_unpaid' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
 ];
+$editHandoutId = (int) ($_GET['handout_id'] ?? 0);
+$editHandout = null;
+if ($editHandoutId > 0) {
+    $stmt = $pdo->prepare('SELECT * FROM handouts WHERE handout_id = ?');
+    $stmt->execute([$editHandoutId]);
+    $editHandout = $stmt->fetch();
+    if (!$editHandout) {
+        flash('Handout not found.', 'warning');
+        redirect($dashboardBaseUrl . '?panel=manage-handouts');
+    }
+}
 $studentSearch = trim($_GET['student_name'] ?? '');
 $revenueByHandout = $pdo->query('SELECT handout_id, course_code_snapshot, handout_title_snapshot,
         COUNT(*) AS paid_count,
@@ -252,6 +294,9 @@ page_header('Admin Dashboard');
             <button class="dashboard-nav-item" type="button" data-dashboard-target="manage-handouts">
                 <span>Manage handouts</span>
                 <strong><?= count($dashboardHandouts) ?></strong>
+            </button>
+            <button class="dashboard-nav-item" type="button" data-dashboard-target="edit-handout">
+                <span><?= $editHandoutId ? 'Edit handout' : 'Add handout' ?></span>
             </button>
             <button class="dashboard-nav-item" type="button" data-dashboard-target="view-orders">
                 <span>View orders</span>
@@ -408,7 +453,7 @@ page_header('Admin Dashboard');
                             <h2 class="h4 mb-1">Manage handouts</h2>
                             <p class="text-muted mb-0">Edit, delete unused handouts, or archive handouts that already have order history.</p>
                         </div>
-                        <a class="btn btn-sm btn-primary align-self-md-start" href="/Handout%20Payment%20System/admin/handouts/edit.php">Add handout</a>
+                        <a class="btn btn-sm btn-primary align-self-md-start" href="/Handout%20Payment%20System/admin/dashboard.php?panel=edit-handout">Add handout</a>
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
@@ -432,7 +477,7 @@ page_header('Admin Dashboard');
                                         <td><?= (int) $handout['order_count'] ?></td>
                                         <td class="text-end">
                                             <div class="d-inline-flex gap-2">
-                                                <a class="btn btn-sm btn-outline-primary" href="/Handout%20Payment%20System/admin/handouts/edit.php?id=<?= (int) $handout['handout_id'] ?>">Edit</a>
+                                                <a class="btn btn-sm btn-outline-primary" href="/Handout%20Payment%20System/admin/dashboard.php?panel=edit-handout&handout_id=<?= (int) $handout['handout_id'] ?>">Edit</a>
                                                 <?php if ((int) $handout['order_count'] === 0): ?>
                                                     <form method="post" onsubmit="return confirm('Delete this handout permanently?');">
                                                         <input type="hidden" name="handout_id" value="<?= (int) $handout['handout_id'] ?>">
@@ -457,6 +502,50 @@ page_header('Admin Dashboard');
                         <div class="alert alert-info mb-0">No handouts have been created yet.</div>
                     <?php endif; ?>
                 </div>
+            </section>
+
+            <section class="dashboard-panel" id="dashboard-edit-handout" data-dashboard-panel="edit-handout" hidden>
+                <form method="post" class="bg-white border rounded-2 p-4">
+                    <input type="hidden" name="action" value="save_handout">
+                    <input type="hidden" name="handout_id" value="<?= (int) $editHandoutId ?>">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                        <div>
+                            <h2 class="h4 mb-1"><?= $editHandoutId ? 'Edit handout' : 'Add handout' ?></h2>
+                            <p class="text-muted mb-0">Update the course handout details without leaving the dashboard.</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="manage-handouts">Back to handouts</button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label" for="title">Title</label>
+                            <input class="form-control" id="title" name="title" value="<?= h($editHandout['title'] ?? '') ?>" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="course_code">Course code</label>
+                            <input class="form-control" id="course_code" name="course_code" value="<?= h($editHandout['course_code'] ?? '') ?>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="current_price">Current price</label>
+                            <input class="form-control" id="current_price" name="current_price" type="number" step="0.01" min="0" value="<?= h($editHandout['current_price'] ?? '') ?>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="status">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <?php foreach (['available', 'unavailable', 'archived'] as $status): ?>
+                                    <option value="<?= h($status) ?>" <?= ($editHandout['status'] ?? 'available') === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="description">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="5" required><?= h($editHandout['description'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-primary" type="submit">Save handout</button>
+                        <button class="btn btn-outline-secondary" type="button" data-dashboard-target="manage-handouts">Cancel</button>
+                    </div>
+                </form>
             </section>
 
             <section class="dashboard-panel" id="dashboard-view-orders" data-dashboard-panel="view-orders" hidden>
