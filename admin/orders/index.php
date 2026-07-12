@@ -121,7 +121,7 @@ page_header('Orders');
                 <label class="form-label" for="payment_status">Payment status</label>
                 <select class="form-select" id="payment_status" name="payment_status">
                     <option value="">All statuses</option>
-                    <?php foreach (['pending_payment', 'paid', 'payment_failed', 'cancelled'] as $status): ?>
+                    <?php foreach (['not_paid', 'paid'] as $status): ?>
                         <option value="<?= h($status) ?>" <?= ($_GET['payment_status'] ?? '') === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
                     <?php endforeach; ?>
                 </select>

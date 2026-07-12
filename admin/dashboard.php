@@ -9,7 +9,7 @@ $stats = [
     'total_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts')->fetchColumn(),
     'available_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn(),
     'paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
-    'pending_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "pending_payment"')->fetchColumn(),
+    'not_paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
     'revenue' => (float) $pdo->query('SELECT COALESCE(SUM(price_snapshot), 0) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
 ];
 $recent = $pdo->query('SELECT o.*, s.full_name FROM orders o JOIN students s ON s.student_id = o.student_id ORDER BY o.ordered_at DESC LIMIT 8')->fetchAll();
@@ -32,7 +32,7 @@ page_header('Admin Dashboard');
             'Total handouts' => $stats['total_handouts'],
             'Available' => $stats['available_handouts'],
             'Paid orders' => $stats['paid_orders'],
-            'Pending payment' => $stats['pending_orders'],
+            'Not paid' => $stats['not_paid_orders'],
             'Revenue' => money($stats['revenue']),
         ] as $label => $value): ?>
             <div class="col-md">

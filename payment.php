@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $stmt = $pdo->prepare('UPDATE payments SET status = "failed" WHERE order_id = ?');
         $stmt->execute([$order['order_id']]);
-        $stmt = $pdo->prepare('UPDATE orders SET payment_status = "payment_failed" WHERE order_id = ?');
+        $stmt = $pdo->prepare('UPDATE orders SET payment_status = "not_paid" WHERE order_id = ?');
         $stmt->execute([$order['order_id']]);
     }
     redirect('/Handout%20Payment%20System/payment-result.php?order=' . urlencode($order['order_reference']));

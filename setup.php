@@ -44,6 +44,10 @@ $schema = file_get_contents(__DIR__ . '/database/schema.sql');
 $pdo->exec($schema);
 $db = db();
 
+$db->exec("ALTER TABLE orders MODIFY payment_status ENUM('not_paid', 'paid', 'pending_payment', 'cancelled', 'payment_failed') NOT NULL DEFAULT 'not_paid'");
+$db->exec("UPDATE orders SET payment_status = 'not_paid' WHERE payment_status IN ('pending_payment', 'cancelled', 'payment_failed')");
+$db->exec("ALTER TABLE orders MODIFY payment_status ENUM('not_paid', 'paid') NOT NULL DEFAULT 'not_paid'");
+
 $adminHash = password_hash('change-me-course-rep', PASSWORD_DEFAULT);
 $stmt = $db->prepare('INSERT IGNORE INTO admins (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)');
 $stmt->execute(['Course Representative', 'course.rep@example.test', $adminHash, 'course_rep', 'active']);

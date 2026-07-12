@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS orders (
     handout_title_snapshot VARCHAR(180) NOT NULL,
     course_code_snapshot VARCHAR(40) NOT NULL,
     price_snapshot DECIMAL(10,2) NOT NULL,
-    payment_status ENUM('pending_payment', 'paid', 'cancelled', 'payment_failed') NOT NULL DEFAULT 'pending_payment',
+    payment_status ENUM('not_paid', 'paid') NOT NULL DEFAULT 'not_paid',
     collection_status ENUM('not_ready', 'ready_for_collection', 'collected') NOT NULL DEFAULT 'not_ready',
     ordered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_orders_student FOREIGN KEY (student_id) REFERENCES students(student_id),

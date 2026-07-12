@@ -14,6 +14,7 @@
 - Added handout delete/archive controls for class changes.
 - Added a paid-list delete action for admins after handout collection.
 - Added paid-order filtering and paid totals grouped by handout.
+- Simplified order payment status to only `paid` or `not_paid`.
 
 ### Checks Performed
 
@@ -27,6 +28,7 @@
 - Created a temporary paid order, confirmed the Orders page showed Delete, used the button to remove it from the paid list, and cleaned up the temporary student record.
 - Ran PHP syntax checks for paid handout filtering.
 - Created temporary paid orders for Database Systems and Computer Networking, confirmed the paid summary grouped them separately, confirmed the handout filter showed only the selected handout, and cleaned up the temporary records.
+- Ran the database migration, confirmed the orders status enum is only `not_paid` and `paid`, and verified the dashboard/orders pages no longer show pending payment.
 
 ### Blockers
 
