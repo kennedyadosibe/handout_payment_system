@@ -143,6 +143,20 @@ page_header('Admin Dashboard');
                 <span>Paid students</span>
                 <strong><?= h((string) $stats['paid_orders']) ?></strong>
             </button>
+            <?php if ($paidByHandout): ?>
+                <div class="dashboard-subnav" aria-label="Paid student handouts">
+                    <button class="dashboard-subnav-item active" type="button" data-course-target="all">
+                        <span>All paid lists</span>
+                    </button>
+                    <?php foreach ($paidByHandout as $group): ?>
+                        <?php $courseKey = md5($group['course_code'] . '|' . $group['title']); ?>
+                        <button class="dashboard-subnav-item" type="button" data-course-target="<?= h($courseKey) ?>">
+                            <span><?= h($group['course_code']) ?></span>
+                            <small><?= count($group['students']) ?></small>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
 
             <div class="sidebar-label mt-4">Admin links</div>
             <a class="dashboard-nav-link" href="/Handout%20Payment%20System/admin/handouts/index.php">Manage handouts</a>
@@ -225,7 +239,8 @@ page_header('Admin Dashboard');
                         <div class="alert alert-info">Showing paid students matching "<?= h($studentSearch) ?>".</div>
                     <?php endif; ?>
                     <?php foreach ($paidByHandout as $group): ?>
-                        <section class="paid-group border rounded-2 p-3 mb-3">
+                        <?php $courseKey = md5($group['course_code'] . '|' . $group['title']); ?>
+                        <section class="paid-group border rounded-2 p-3 mb-3" data-course-group="<?= h($courseKey) ?>">
                             <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                                 <div>
                                     <span class="badge text-bg-secondary"><?= h($group['course_code']) ?></span>

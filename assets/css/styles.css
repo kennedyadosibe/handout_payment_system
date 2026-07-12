@@ -240,6 +240,43 @@ body {
     text-align: center;
 }
 
+.dashboard-subnav {
+    border-left: 1px solid rgba(255, 255, 255, .28);
+    display: grid;
+    gap: .35rem;
+    margin: .45rem 0 .75rem 1rem;
+    padding-left: .65rem;
+}
+
+.dashboard-subnav-item {
+    align-items: center;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid transparent;
+    border-radius: .42rem;
+    color: rgba(255, 255, 255, .8);
+    display: flex;
+    font-size: .9rem;
+    justify-content: space-between;
+    min-height: 36px;
+    padding: .45rem .55rem;
+    text-align: left;
+}
+
+.dashboard-subnav-item:hover,
+.dashboard-subnav-item.active {
+    background: rgba(255, 255, 255, .18);
+    border-color: rgba(255, 255, 255, .28);
+    color: #fff;
+}
+
+.dashboard-subnav-item small {
+    background: rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    min-width: 1.65rem;
+    padding: .08rem .35rem;
+    text-align: center;
+}
+
 .dashboard-content,
 .dashboard-panel {
     min-width: 0;

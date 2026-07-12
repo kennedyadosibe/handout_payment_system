@@ -26,6 +26,33 @@
         window.history.replaceState({}, '', url);
     }
 
+    function filterPaidCourse(courseKey, updateUrl) {
+        var selectedCourse = courseKey || 'all';
+        var groups = Array.from(document.querySelectorAll('[data-course-group]'));
+        var courseButtons = Array.from(document.querySelectorAll('[data-course-target]'));
+
+        groups.forEach(function (group) {
+            group.hidden = selectedCourse !== 'all' && group.dataset.courseGroup !== selectedCourse;
+        });
+
+        courseButtons.forEach(function (button) {
+            var isActive = button.dataset.courseTarget === selectedCourse;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-current', isActive ? 'true' : 'false');
+        });
+
+        if (updateUrl) {
+            var url = new URL(window.location.href);
+            if (selectedCourse === 'all') {
+                url.searchParams.delete('course');
+            } else {
+                url.searchParams.set('course', selectedCourse);
+            }
+            url.searchParams.set('panel', 'paid-students');
+            window.history.replaceState({}, '', url);
+        }
+    }
+
     function updateGroupSearch(group, value) {
         var query = value.trim().toLowerCase();
         var rows = Array.from(group.querySelectorAll('tbody tr'));
@@ -70,8 +97,28 @@
         });
     });
 
-    var currentPanel = new URLSearchParams(window.location.search).get('panel');
+    document.querySelectorAll('[data-course-target]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            activateDashboardPanel('paid-students');
+            filterPaidCourse(button.dataset.courseTarget, true);
+
+            var paidPanel = document.querySelector('[data-dashboard-panel="paid-students"]');
+            if (paidPanel) {
+                paidPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+
+    var params = new URLSearchParams(window.location.search);
+    var currentPanel = params.get('panel');
+    var currentCourse = params.get('course') || 'all';
+    if (currentCourse !== 'all') {
+        currentPanel = 'paid-students';
+    }
     if (document.querySelector('[data-dashboard-panel]')) {
         activateDashboardPanel(currentPanel || 'overview');
+    }
+    if (document.querySelector('[data-course-group]')) {
+        filterPaidCourse(currentCourse, currentPanel === 'paid-students' || currentCourse !== 'all');
     }
 }());
