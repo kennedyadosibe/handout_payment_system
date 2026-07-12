@@ -7,7 +7,7 @@ $admin = require_admin();
 $pdo = db();
 
 $dashboardBaseUrl = '/Handout%20Payment%20System/admin/dashboard.php';
-$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'manage-handouts', 'edit-handout', 'view-orders'];
+$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'incomplete-details', 'manage-handouts', 'edit-handout', 'view-orders'];
 $returnPanel = $_POST['return_panel'] ?? 'overview';
 if (!in_array($returnPanel, $allowedReturnPanels, true)) {
     $returnPanel = 'overview';
@@ -204,6 +204,11 @@ $dashboardOrders = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone
     JOIN students s ON s.student_id = o.student_id
     WHERE o.payment_status = "paid"
     ORDER BY o.ordered_at DESC')->fetchAll();
+$incompleteOrders = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone, s.email
+    FROM orders o
+    JOIN students s ON s.student_id = o.student_id
+    WHERE o.payment_status = "not_paid"
+    ORDER BY o.ordered_at DESC')->fetchAll();
 $paidSql = 'SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
@@ -256,6 +261,10 @@ page_header('Admin Dashboard');
             <button class="dashboard-nav-item" type="button" data-dashboard-target="paid-students">
                 <span>Paid students</span>
                 <strong><?= h((string) $stats['paid_orders']) ?></strong>
+            </button>
+            <button class="dashboard-nav-item" type="button" data-dashboard-target="incomplete-details">
+                <span>Incomplete details</span>
+                <strong><?= count($incompleteOrders) ?></strong>
             </button>
             <?php if ($paidByHandout): ?>
                 <div class="dashboard-subnav" aria-label="Paid student handouts">
@@ -424,6 +433,47 @@ page_header('Admin Dashboard');
                     <?php endforeach; ?>
                     <?php if (!$paidByHandout): ?>
                         <div class="alert alert-info mb-0"><?= $studentSearch !== '' ? 'No paid students match that name.' : 'No paid orders have been recorded yet.' ?></div>
+                    <?php endif; ?>
+                </div>
+            </section>
+
+            <section class="dashboard-panel" id="dashboard-incomplete-details" data-dashboard-panel="incomplete-details" hidden>
+                <div class="bg-white border rounded-2 p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">Incomplete details</h2>
+                            <p class="text-muted mb-0">Students listed here entered their details, but Paystack has not confirmed payment.</p>
+                        </div>
+                        <span class="badge text-bg-warning align-self-md-start"><?= count($incompleteOrders) ?> not paid</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Contact</th>
+                                    <th>Handout</th>
+                                    <th>Amount</th>
+                                    <th>Reference</th>
+                                    <th>Saved</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($incompleteOrders as $order): ?>
+                                    <tr>
+                                        <td><?= h($order['full_name']) ?><br><span class="text-muted small"><?= h($order['index_number']) ?></span></td>
+                                        <td><span class="small"><?= h($order['phone']) ?><br><?= h($order['email']) ?></span></td>
+                                        <td><?= h($order['course_code_snapshot']) ?><br><span class="text-muted small"><?= h($order['handout_title_snapshot']) ?></span></td>
+                                        <td><?= money($order['price_snapshot']) ?></td>
+                                        <td><span class="small"><?= h($order['order_reference']) ?></span></td>
+                                        <td><span class="small"><?= h($order['ordered_at']) ?></span></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (!$incompleteOrders): ?>
+                        <div class="alert alert-info mb-0">No incomplete payment details are currently saved.</div>
                     <?php endif; ?>
                 </div>
             </section>
