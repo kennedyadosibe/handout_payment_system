@@ -6,9 +6,76 @@ require_once __DIR__ . '/../app/layout.php';
 $admin = require_admin();
 $pdo = db();
 
+$dashboardBaseUrl = '/Handout%20Payment%20System/admin/dashboard.php';
+$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'manage-handouts', 'view-orders'];
+$returnPanel = $_POST['return_panel'] ?? 'overview';
+if (!in_array($returnPanel, $allowedReturnPanels, true)) {
+    $returnPanel = 'overview';
+}
+$returnUrl = $dashboardBaseUrl . '?panel=' . rawurlencode($returnPanel);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $orderId = (int) ($_POST['order_id'] ?? 0);
+    $handoutId = (int) ($_POST['handout_id'] ?? 0);
+
+    if ($action === 'delete' || $action === 'archive') {
+        $stmt = $pdo->prepare('SELECT h.*, COUNT(o.order_id) AS order_count
+            FROM handouts h
+            LEFT JOIN orders o ON o.handout_id = h.handout_id
+            WHERE h.handout_id = ?
+            GROUP BY h.handout_id');
+        $stmt->execute([$handoutId]);
+        $handout = $stmt->fetch();
+
+        if (!$handout) {
+            flash('Handout not found.', 'warning');
+            redirect($returnUrl);
+        }
+
+        if ($action === 'delete') {
+            if ((int) $handout['order_count'] > 0) {
+                flash('This handout already has orders, so it was not deleted. Archive it to remove it from active class use while keeping records.', 'warning');
+                redirect($returnUrl);
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare('DELETE FROM handouts WHERE handout_id = ?');
+                $stmt->execute([$handoutId]);
+
+                $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$admin['admin_id'], 'delete handout from dashboard', 'handouts', (string) $handoutId]);
+
+                $pdo->commit();
+                flash('Handout deleted.');
+            } catch (Throwable $exception) {
+                $pdo->rollBack();
+                flash('Handout could not be deleted. Please try again.', 'danger');
+            }
+
+            redirect($returnUrl);
+        }
+
+        if ($action === 'archive') {
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare('UPDATE handouts SET status = "archived" WHERE handout_id = ?');
+                $stmt->execute([$handoutId]);
+
+                $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$admin['admin_id'], 'archive handout from dashboard', 'handouts', (string) $handoutId]);
+
+                $pdo->commit();
+                flash('Handout archived. Existing order history is preserved.');
+            } catch (Throwable $exception) {
+                $pdo->rollBack();
+                flash('Handout could not be archived. Please try again.', 'danger');
+            }
+
+            redirect($returnUrl);
+        }
+    }
 
     if ($action === 'delete_paid_order') {
         $stmt = $pdo->prepare('SELECT o.*, s.full_name
@@ -20,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$order || $order['payment_status'] !== 'paid') {
             flash('Paid student record not found.', 'warning');
-            redirect('/Handout%20Payment%20System/admin/dashboard.php');
+            redirect($returnUrl);
         }
 
         $pdo->beginTransaction();
@@ -41,7 +108,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Student could not be deleted from the handout paid list. Please try again.', 'danger');
         }
 
-        redirect('/Handout%20Payment%20System/admin/dashboard.php');
+        redirect($returnUrl);
+    }
+
+    if ($action === 'update_collection') {
+        $collectionStatus = $_POST['collection_status'] ?? '';
+        if (!in_array($collectionStatus, ['not_ready', 'ready_for_collection', 'collected'], true)) {
+            flash('Collection status is invalid.', 'warning');
+            redirect($returnUrl);
+        }
+
+        $stmt = $pdo->prepare('UPDATE orders SET collection_status = ? WHERE order_id = ? AND payment_status = "paid"');
+        $stmt->execute([$collectionStatus, $orderId]);
+        flash('Collection status updated.');
+        redirect($returnUrl);
     }
 
     if ($action === 'mark_collected') {
@@ -54,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$order || $order['payment_status'] !== 'paid') {
             flash('Paid student record not found.', 'warning');
-            redirect('/Handout%20Payment%20System/admin/dashboard.php');
+            redirect($returnUrl);
         }
 
         $pdo->beginTransaction();
@@ -72,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Student could not be marked as given. Please try again.', 'danger');
         }
 
-        redirect('/Handout%20Payment%20System/admin/dashboard.php');
+        redirect($returnUrl);
     }
 }
 
@@ -90,6 +170,16 @@ $revenueByHandout = $pdo->query('SELECT handout_id, course_code_snapshot, handou
     WHERE payment_status = "paid"
     GROUP BY handout_id, course_code_snapshot, handout_title_snapshot
     ORDER BY course_code_snapshot, handout_title_snapshot')->fetchAll();
+$dashboardHandouts = $pdo->query('SELECT h.*, COUNT(o.order_id) AS order_count
+    FROM handouts h
+    LEFT JOIN orders o ON o.handout_id = h.handout_id
+    GROUP BY h.handout_id
+    ORDER BY h.created_at DESC')->fetchAll();
+$dashboardOrders = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone, s.email
+    FROM orders o
+    JOIN students s ON s.student_id = o.student_id
+    WHERE o.payment_status = "paid"
+    ORDER BY o.ordered_at DESC')->fetchAll();
 $paidSql = 'SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
@@ -159,8 +249,14 @@ page_header('Admin Dashboard');
             <?php endif; ?>
 
             <div class="sidebar-label mt-4">Admin links</div>
-            <a class="dashboard-nav-link" href="/Handout%20Payment%20System/admin/handouts/index.php">Manage handouts</a>
-            <a class="dashboard-nav-link" href="/Handout%20Payment%20System/admin/orders/index.php">View orders</a>
+            <button class="dashboard-nav-item" type="button" data-dashboard-target="manage-handouts">
+                <span>Manage handouts</span>
+                <strong><?= count($dashboardHandouts) ?></strong>
+            </button>
+            <button class="dashboard-nav-item" type="button" data-dashboard-target="view-orders">
+                <span>View orders</span>
+                <strong><?= count($dashboardOrders) ?></strong>
+            </button>
         </aside>
 
         <div class="dashboard-content">
@@ -191,7 +287,7 @@ page_header('Admin Dashboard');
                             <h2 class="h4 mb-1">Revenue by handout</h2>
                             <p class="text-muted mb-0">Each handout keeps its own revenue total.</p>
                         </div>
-                        <a class="btn btn-sm btn-outline-primary align-self-md-start" href="/Handout%20Payment%20System/admin/orders/index.php">Open paid list</a>
+                        <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="view-orders">Open paid list</button>
                     </div>
                     <div class="row g-3">
                         <?php foreach ($revenueByHandout as $revenue): ?>
@@ -220,7 +316,7 @@ page_header('Admin Dashboard');
                             <h2 class="h4 mb-1">Paid students by handout</h2>
                             <p class="text-muted mb-0">Students are grouped under the exact handout they paid for.</p>
                         </div>
-                        <a class="btn btn-sm btn-outline-primary align-self-md-start" href="/Handout%20Payment%20System/admin/orders/index.php">Open paid list</a>
+                        <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="view-orders">Open paid list</button>
                     </div>
                     <form class="row g-3 align-items-end mb-4" method="get">
                         <input type="hidden" name="panel" value="paid-students">
@@ -281,11 +377,13 @@ page_header('Admin Dashboard');
                                                         <?php if ($student['collection_status'] !== 'collected'): ?>
                                                             <form method="post">
                                                                 <input type="hidden" name="order_id" value="<?= (int) $student['order_id'] ?>">
+                                                                <input type="hidden" name="return_panel" value="paid-students">
                                                                 <button class="btn btn-sm btn-outline-primary" name="action" value="mark_collected" type="submit">Given</button>
                                                             </form>
                                                         <?php endif; ?>
                                                         <form method="post" onsubmit="return confirm('Delete this student from this handout paid list? This removes the order and reduces revenue.');">
                                                             <input type="hidden" name="order_id" value="<?= (int) $student['order_id'] ?>">
+                                                            <input type="hidden" name="return_panel" value="paid-students">
                                                             <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
                                                         </form>
                                                     </div>
@@ -299,6 +397,125 @@ page_header('Admin Dashboard');
                     <?php endforeach; ?>
                     <?php if (!$paidByHandout): ?>
                         <div class="alert alert-info mb-0"><?= $studentSearch !== '' ? 'No paid students match that name.' : 'No paid orders have been recorded yet.' ?></div>
+                    <?php endif; ?>
+                </div>
+            </section>
+
+            <section class="dashboard-panel" id="dashboard-manage-handouts" data-dashboard-panel="manage-handouts" hidden>
+                <div class="bg-white border rounded-2 p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">Manage handouts</h2>
+                            <p class="text-muted mb-0">Edit, delete unused handouts, or archive handouts that already have order history.</p>
+                        </div>
+                        <a class="btn btn-sm btn-primary align-self-md-start" href="/Handout%20Payment%20System/admin/handouts/edit.php">Add handout</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Title</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th>Orders</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($dashboardHandouts as $handout): ?>
+                                    <tr>
+                                        <td><?= h($handout['course_code']) ?></td>
+                                        <td><?= h($handout['title']) ?></td>
+                                        <td><?= money($handout['current_price']) ?></td>
+                                        <td><?= status_badge($handout['status']) ?></td>
+                                        <td><?= (int) $handout['order_count'] ?></td>
+                                        <td class="text-end">
+                                            <div class="d-inline-flex gap-2">
+                                                <a class="btn btn-sm btn-outline-primary" href="/Handout%20Payment%20System/admin/handouts/edit.php?id=<?= (int) $handout['handout_id'] ?>">Edit</a>
+                                                <?php if ((int) $handout['order_count'] === 0): ?>
+                                                    <form method="post" onsubmit="return confirm('Delete this handout permanently?');">
+                                                        <input type="hidden" name="handout_id" value="<?= (int) $handout['handout_id'] ?>">
+                                                        <input type="hidden" name="return_panel" value="manage-handouts">
+                                                        <button class="btn btn-sm btn-outline-danger" name="action" value="delete" type="submit">Delete</button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <form method="post" onsubmit="return confirm('Archive this handout and preserve its order history?');">
+                                                        <input type="hidden" name="handout_id" value="<?= (int) $handout['handout_id'] ?>">
+                                                        <input type="hidden" name="return_panel" value="manage-handouts">
+                                                        <button class="btn btn-sm btn-outline-secondary" name="action" value="archive" type="submit">Archive</button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (!$dashboardHandouts): ?>
+                        <div class="alert alert-info mb-0">No handouts have been created yet.</div>
+                    <?php endif; ?>
+                </div>
+            </section>
+
+            <section class="dashboard-panel" id="dashboard-view-orders" data-dashboard-panel="view-orders" hidden>
+                <div class="bg-white border rounded-2 p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">View orders</h2>
+                            <p class="text-muted mb-0">Only paid students appear here. Use this list to update collection status or remove a paid record.</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="paid-students">Grouped paid lists</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Reference</th>
+                                    <th>Student</th>
+                                    <th>Contact</th>
+                                    <th>Handout</th>
+                                    <th>Amount</th>
+                                    <th>Collection</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($dashboardOrders as $order): ?>
+                                    <tr class="<?= $order['collection_status'] === 'collected' ? 'student-collected' : '' ?>">
+                                        <td><?= h($order['order_reference']) ?></td>
+                                        <td><?= h($order['full_name']) ?><br><span class="text-muted small"><?= h($order['index_number']) ?></span></td>
+                                        <td><span class="small"><?= h($order['phone']) ?><br><?= h($order['email']) ?></span></td>
+                                        <td><?= h($order['course_code_snapshot']) ?><br><span class="text-muted small"><?= h($order['handout_title_snapshot']) ?></span></td>
+                                        <td><?= money($order['price_snapshot']) ?></td>
+                                        <td>
+                                            <form method="post" class="d-flex gap-2">
+                                                <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                                <input type="hidden" name="action" value="update_collection">
+                                                <input type="hidden" name="return_panel" value="view-orders">
+                                                <select class="form-select form-select-sm" name="collection_status">
+                                                    <?php foreach (['not_ready', 'ready_for_collection', 'collected'] as $status): ?>
+                                                        <option value="<?= h($status) ?>" <?= $order['collection_status'] === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
+                                            </form>
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="post" onsubmit="return confirm('Delete this student from the paid list after giving the handout?');">
+                                                <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                                <input type="hidden" name="return_panel" value="view-orders">
+                                                <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (!$dashboardOrders): ?>
+                        <div class="alert alert-info mb-0">No paid orders have been recorded yet.</div>
                     <?php endif; ?>
                 </div>
             </section>

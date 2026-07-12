@@ -2,7 +2,7 @@
     function activateDashboardPanel(target) {
         var panelName = target || 'overview';
         var panels = Array.from(document.querySelectorAll('[data-dashboard-panel]'));
-        var buttons = Array.from(document.querySelectorAll('[data-dashboard-target]'));
+        var buttons = Array.from(document.querySelectorAll('.dashboard-sidebar [data-dashboard-target]'));
         var matchingPanel = panels.find(function (panel) {
             return panel.dataset.dashboardPanel === panelName;
         });

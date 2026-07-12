@@ -26,6 +26,7 @@
 - Added sidebar navigation so dashboard sections load one at a time.
 - Styled the dashboard sidebar and cards with a stronger blue theme.
 - Added course sub-navigation under Paid students for direct handout-list access.
+- Moved Manage handouts and View orders into dashboard panels.
 
 ### Checks Performed
 
@@ -51,6 +52,7 @@
 - Ran PHP syntax checks and verified the dashboard sidebar can switch between overview, revenue, and paid-student panels.
 - Refreshed the admin dashboard in the browser and confirmed the sidebar and dashboard cards use the updated blue styling.
 - Ran PHP syntax checks and verified the Paid students course submenu filters directly to one handout list and restores all lists.
+- Ran PHP syntax checks and verified Manage handouts and View orders stay inside the dashboard as sidebar panels.
 
 ### Blockers
 
