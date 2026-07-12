@@ -1,8 +1,8 @@
-# Golden Star Theme
+# Blue Star Theme
 
 ## Purpose
 
-Adds a gold visual theme with subtle star-like specks across the page background and hero area.
+Adds a blue visual theme with subtle star-like specks across the page background and hero area.
 
 ## User Flow
 
@@ -14,4 +14,4 @@ Students and admins see the updated theme throughout the site. The change is vis
 
 ## Testing Notes
 
-Run PHP syntax checks after the style update. Refresh the browser to confirm the gold theme and star spotting are visible.
+Run PHP syntax checks after the style update. Refresh the browser to confirm the blue theme and star spotting are visible.
