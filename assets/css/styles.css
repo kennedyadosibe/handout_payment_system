@@ -26,6 +26,63 @@ body {
     color: #0f4fa8;
 }
 
+.brand-logo {
+    align-items: center;
+    display: inline-flex;
+    gap: .55rem;
+    letter-spacing: 0;
+    padding-bottom: .2rem;
+    padding-top: .2rem;
+}
+
+.brand-mark {
+    align-items: center;
+    background:
+        radial-gradient(circle at 72% 25%, #ffffff 0 2px, transparent 3px),
+        linear-gradient(135deg, #1d72f3, #0b3d82);
+    border-radius: 12px;
+    box-shadow: 0 .35rem .9rem rgba(23, 100, 216, .28);
+    display: inline-flex;
+    height: 38px;
+    justify-content: center;
+    position: relative;
+    width: 38px;
+}
+
+.brand-book {
+    border: 2px solid #fff;
+    border-radius: 3px 7px 7px 3px;
+    height: 20px;
+    position: relative;
+    width: 18px;
+}
+
+.brand-book::before {
+    background: rgba(255, 255, 255, .85);
+    content: "";
+    height: 16px;
+    left: 6px;
+    position: absolute;
+    top: 1px;
+    width: 2px;
+}
+
+.brand-spark {
+    background: #b9dcff;
+    border-radius: 999px;
+    height: 5px;
+    position: absolute;
+    right: 7px;
+    top: 8px;
+    width: 5px;
+}
+
+.brand-word {
+    color: #0f4fa8;
+    font-size: 1.16rem;
+    font-weight: 800;
+}
+
 .nav-link.active {
     color: #0f4fa8 !important;
     font-weight: 700;

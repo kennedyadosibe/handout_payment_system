@@ -19,7 +19,13 @@ function page_header(string $title, string $active = ''): void
     <body>
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/Handout%20Payment%20System/">HandoutPay</a>
+            <a class="navbar-brand brand-logo" href="/Handout%20Payment%20System/" aria-label="HandoutPay home">
+                <span class="brand-mark" aria-hidden="true">
+                    <span class="brand-book"></span>
+                    <span class="brand-spark"></span>
+                </span>
+                <span class="brand-word">HandoutPay</span>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
                 <span class="navbar-toggler-icon"></span>
             </button>

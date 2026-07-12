@@ -10,12 +10,14 @@
 - Added feature documentation structure in `docs/features/`.
 - Added progress tracking structure in `progress/`.
 - Added a blue visual theme with subtle star spotting across the site.
+- Replaced the plain navbar brand text with a logo treatment.
 
 ### Checks Performed
 
 - Ran PHP syntax checks across the project with `C:\xampp\php\php.exe`.
 - Confirmed setup page handles database connection failure without a fatal crash.
 - Refreshed the local site in the in-app browser and confirmed the blue theme and star spotting are visible.
+- Refreshed the local site in the in-app browser and confirmed the navbar logo appears correctly.
 
 ### Blockers
 
