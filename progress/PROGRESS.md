@@ -28,6 +28,7 @@
 - Added course sub-navigation under Paid students for direct handout-list access.
 - Moved Manage handouts and View orders into dashboard panels.
 - Added an in-dashboard handout edit panel for Manage handouts.
+- Added complete handout deletion beside Edit in the dashboard Manage handouts panel.
 
 ### Checks Performed
 
@@ -55,6 +56,7 @@
 - Ran PHP syntax checks and verified the Paid students course submenu filters directly to one handout list and restores all lists.
 - Ran PHP syntax checks and verified Manage handouts and View orders stay inside the dashboard as sidebar panels.
 - Ran PHP syntax checks, verified Edit opens inside the dashboard with handout values loaded, and confirmed saving returns to Manage handouts.
+- Ran PHP syntax checks, created a temporary handout with a paid order and payment, deleted it from Manage handouts, and confirmed the handout, order, and payment rows were removed.
 
 ### Blockers
 

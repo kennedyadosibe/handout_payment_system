@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $orderId = (int) ($_POST['order_id'] ?? 0);
     $handoutId = (int) ($_POST['handout_id'] ?? 0);
 
-    if ($action === 'delete' || $action === 'archive') {
+    if ($action === 'delete') {
         $stmt = $pdo->prepare('SELECT h.*, COUNT(o.order_id) AS order_count
             FROM handouts h
             LEFT JOIN orders o ON o.handout_id = h.handout_id
@@ -33,48 +33,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect($returnUrl);
         }
 
-        if ($action === 'delete') {
-            if ((int) $handout['order_count'] > 0) {
-                flash('This handout already has orders, so it was not deleted. Archive it to remove it from active class use while keeping records.', 'warning');
-                redirect($returnUrl);
-            }
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('DELETE p FROM payments p
+                JOIN orders o ON o.order_id = p.order_id
+                WHERE o.handout_id = ?');
+            $stmt->execute([$handoutId]);
 
-            $pdo->beginTransaction();
-            try {
-                $stmt = $pdo->prepare('DELETE FROM handouts WHERE handout_id = ?');
-                $stmt->execute([$handoutId]);
+            $stmt = $pdo->prepare('DELETE FROM orders WHERE handout_id = ?');
+            $stmt->execute([$handoutId]);
 
-                $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
-                $stmt->execute([$admin['admin_id'], 'delete handout from dashboard', 'handouts', (string) $handoutId]);
+            $stmt = $pdo->prepare('DELETE FROM handouts WHERE handout_id = ?');
+            $stmt->execute([$handoutId]);
 
-                $pdo->commit();
-                flash('Handout deleted.');
-            } catch (Throwable $exception) {
-                $pdo->rollBack();
-                flash('Handout could not be deleted. Please try again.', 'danger');
-            }
+            $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$admin['admin_id'], 'permanently delete handout and related records from dashboard', 'handouts', (string) $handoutId]);
 
-            redirect($returnUrl);
+            $pdo->commit();
+            flash($handout['course_code'] . ' handout and its related records were deleted completely.');
+        } catch (Throwable $exception) {
+            $pdo->rollBack();
+            flash('Handout could not be deleted completely. Please try again.', 'danger');
         }
 
-        if ($action === 'archive') {
-            $pdo->beginTransaction();
-            try {
-                $stmt = $pdo->prepare('UPDATE handouts SET status = "archived" WHERE handout_id = ?');
-                $stmt->execute([$handoutId]);
-
-                $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
-                $stmt->execute([$admin['admin_id'], 'archive handout from dashboard', 'handouts', (string) $handoutId]);
-
-                $pdo->commit();
-                flash('Handout archived. Existing order history is preserved.');
-            } catch (Throwable $exception) {
-                $pdo->rollBack();
-                flash('Handout could not be archived. Please try again.', 'danger');
-            }
-
-            redirect($returnUrl);
-        }
+        redirect($returnUrl);
     }
 
     if ($action === 'save_handout') {
@@ -451,7 +433,7 @@ page_header('Admin Dashboard');
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                         <div>
                             <h2 class="h4 mb-1">Manage handouts</h2>
-                            <p class="text-muted mb-0">Edit, delete unused handouts, or archive handouts that already have order history.</p>
+                            <p class="text-muted mb-0">Edit handouts or delete a handout completely with its related order records.</p>
                         </div>
                         <a class="btn btn-sm btn-primary align-self-md-start" href="/Handout%20Payment%20System/admin/dashboard.php?panel=edit-handout">Add handout</a>
                     </div>
@@ -478,19 +460,11 @@ page_header('Admin Dashboard');
                                         <td class="text-end">
                                             <div class="d-inline-flex gap-2">
                                                 <a class="btn btn-sm btn-outline-primary" href="/Handout%20Payment%20System/admin/dashboard.php?panel=edit-handout&handout_id=<?= (int) $handout['handout_id'] ?>">Edit</a>
-                                                <?php if ((int) $handout['order_count'] === 0): ?>
-                                                    <form method="post" onsubmit="return confirm('Delete this handout permanently?');">
-                                                        <input type="hidden" name="handout_id" value="<?= (int) $handout['handout_id'] ?>">
-                                                        <input type="hidden" name="return_panel" value="manage-handouts">
-                                                        <button class="btn btn-sm btn-outline-danger" name="action" value="delete" type="submit">Delete</button>
-                                                    </form>
-                                                <?php else: ?>
-                                                    <form method="post" onsubmit="return confirm('Archive this handout and preserve its order history?');">
-                                                        <input type="hidden" name="handout_id" value="<?= (int) $handout['handout_id'] ?>">
-                                                        <input type="hidden" name="return_panel" value="manage-handouts">
-                                                        <button class="btn btn-sm btn-outline-secondary" name="action" value="archive" type="submit">Archive</button>
-                                                    </form>
-                                                <?php endif; ?>
+                                                <form method="post" onsubmit="return confirm('Delete this handout completely? This will remove its orders and payment records too.');">
+                                                    <input type="hidden" name="handout_id" value="<?= (int) $handout['handout_id'] ?>">
+                                                    <input type="hidden" name="return_panel" value="manage-handouts">
+                                                    <button class="btn btn-sm btn-outline-danger" name="action" value="delete" type="submit">Delete</button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>
