@@ -185,6 +185,10 @@ body {
         rgba(247, 251, 255, .72);
 }
 
+.paid-group-search {
+    max-width: 420px;
+}
+
 .student-collected td:not(:last-child) {
     color: #667085;
     text-decoration-line: line-through;

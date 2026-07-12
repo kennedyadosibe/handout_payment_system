@@ -209,6 +209,11 @@ page_header('Admin Dashboard');
                         <div class="text-muted small"><?= money($group['total']) ?> received</div>
                     </div>
                 </div>
+                <div class="paid-group-search mb-3">
+                    <label class="form-label" for="search-<?= h(md5($group['course_code'] . $group['title'])) ?>">Search this handout list</label>
+                    <input class="form-control form-control-sm" id="search-<?= h(md5($group['course_code'] . $group['title'])) ?>" data-handout-search type="search" placeholder="Student name in <?= h($group['course_code']) ?>">
+                    <div class="small text-muted mt-1" data-handout-search-count></div>
+                </div>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
                         <thead>
@@ -255,4 +260,5 @@ page_header('Admin Dashboard');
         <?php endif; ?>
     </div>
 </main>
+<script src="/Handout%20Payment%20System/assets/js/dashboard.js"></script>
 <?php page_footer(); ?>
