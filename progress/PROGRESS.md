@@ -19,6 +19,7 @@
 - Replaced simulated payment with Paystack transaction initialization and verification.
 - Grouped paid students on the admin dashboard by handout.
 - Added delete action for paid students directly inside dashboard handout groups.
+- Added dashboard `Given` action that strikes through collected students without reducing revenue.
 
 ### Checks Performed
 
@@ -37,6 +38,7 @@
 - Ran PHP syntax checks, confirmed Paystack initialization returns a `checkout.paystack.com` URL using temporary fake data, cleaned up the temporary records, and verified the payment page shows `Continue to Paystack` instead of simulator buttons.
 - Ran PHP syntax checks, created temporary paid rows for two handouts, verified the dashboard groups students under the correct handout sections, and cleaned up the temporary records.
 - Ran PHP syntax checks, created a temporary paid row, verified dashboard Delete buttons are present, executed the dashboard delete handler, confirmed the temporary row was removed, and cleaned up the temporary student record.
+- Ran PHP syntax checks, created a temporary paid row, marked it as Given, confirmed revenue stayed unchanged, verified the dashboard row uses strikethrough styling, and cleaned up the temporary record.
 
 ### Blockers
 

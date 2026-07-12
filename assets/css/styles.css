@@ -179,6 +179,16 @@ body {
         rgba(247, 251, 255, .72);
 }
 
+.student-collected td:not(:last-child) {
+    color: #667085;
+    text-decoration-line: line-through;
+    text-decoration-thickness: 2px;
+}
+
+.student-collected td:last-child {
+    opacity: .86;
+}
+
 .table thead th {
     background: #dcecff;
     color: #0b3d82;

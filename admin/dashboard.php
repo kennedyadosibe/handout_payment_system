@@ -43,6 +43,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         redirect('/Handout%20Payment%20System/admin/dashboard.php');
     }
+
+    if ($action === 'mark_collected') {
+        $stmt = $pdo->prepare('SELECT o.*, s.full_name
+            FROM orders o
+            JOIN students s ON s.student_id = o.student_id
+            WHERE o.order_id = ?');
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+
+        if (!$order || $order['payment_status'] !== 'paid') {
+            flash('Paid student record not found.', 'warning');
+            redirect('/Handout%20Payment%20System/admin/dashboard.php');
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('UPDATE orders SET collection_status = "collected" WHERE order_id = ?');
+            $stmt->execute([$orderId]);
+
+            $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$admin['admin_id'], 'mark handout as given from dashboard', 'orders', $order['order_reference']]);
+
+            $pdo->commit();
+            flash($order['full_name'] . ' has been marked as given.');
+        } catch (Throwable $exception) {
+            $pdo->rollBack();
+            flash('Student could not be marked as given. Please try again.', 'danger');
+        }
+
+        redirect('/Handout%20Payment%20System/admin/dashboard.php');
+    }
 }
 
 $stats = [
@@ -137,17 +168,25 @@ page_header('Admin Dashboard');
                         </thead>
                         <tbody>
                             <?php foreach ($group['students'] as $student): ?>
-                                <tr>
+                                <tr class="<?= $student['collection_status'] === 'collected' ? 'student-collected' : '' ?>">
                                     <td><?= h($student['full_name']) ?></td>
                                     <td><?= h($student['index_number']) ?></td>
                                     <td><?= h($student['phone']) ?></td>
                                     <td><?= money($student['price_snapshot']) ?></td>
                                     <td><?= status_badge($student['collection_status']) ?></td>
                                     <td class="text-end">
-                                        <form method="post" onsubmit="return confirm('Delete this student from this handout paid list after giving the handout?');">
-                                            <input type="hidden" name="order_id" value="<?= (int) $student['order_id'] ?>">
-                                            <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
-                                        </form>
+                                        <div class="d-inline-flex gap-2">
+                                            <?php if ($student['collection_status'] !== 'collected'): ?>
+                                                <form method="post">
+                                                    <input type="hidden" name="order_id" value="<?= (int) $student['order_id'] ?>">
+                                                    <button class="btn btn-sm btn-outline-primary" name="action" value="mark_collected" type="submit">Given</button>
+                                                </form>
+                                            <?php endif; ?>
+                                            <form method="post" onsubmit="return confirm('Delete this student from this handout paid list? This removes the order and reduces revenue.');">
+                                                <input type="hidden" name="order_id" value="<?= (int) $student['order_id'] ?>">
+                                                <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
