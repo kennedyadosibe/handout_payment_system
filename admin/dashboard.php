@@ -9,10 +9,10 @@ $stats = [
     'total_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts')->fetchColumn(),
     'available_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn(),
     'paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
-    'not_paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
+    'recorded_unpaid' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
     'revenue' => (float) $pdo->query('SELECT COALESCE(SUM(price_snapshot), 0) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
 ];
-$recent = $pdo->query('SELECT o.*, s.full_name FROM orders o JOIN students s ON s.student_id = o.student_id ORDER BY o.ordered_at DESC LIMIT 8')->fetchAll();
+$recent = $pdo->query('SELECT o.*, s.full_name FROM orders o JOIN students s ON s.student_id = o.student_id WHERE o.payment_status = "paid" ORDER BY o.ordered_at DESC LIMIT 8')->fetchAll();
 
 page_header('Admin Dashboard');
 ?>
@@ -32,7 +32,7 @@ page_header('Admin Dashboard');
             'Total handouts' => $stats['total_handouts'],
             'Available' => $stats['available_handouts'],
             'Paid orders' => $stats['paid_orders'],
-            'Not paid' => $stats['not_paid_orders'],
+            'Saved incomplete details' => $stats['recorded_unpaid'],
             'Revenue' => money($stats['revenue']),
         ] as $label => $value): ?>
             <div class="col-md">
@@ -46,7 +46,7 @@ page_header('Admin Dashboard');
         <?php endforeach; ?>
     </div>
     <div class="bg-white border rounded-2 p-4">
-        <h2 class="h4">Recent orders</h2>
+        <h2 class="h4">Recent paid orders</h2>
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead>
@@ -55,7 +55,6 @@ page_header('Admin Dashboard');
                         <th>Student</th>
                         <th>Handout</th>
                         <th>Amount</th>
-                        <th>Payment</th>
                         <th>Collection</th>
                     </tr>
                 </thead>
@@ -66,13 +65,15 @@ page_header('Admin Dashboard');
                             <td><?= h($order['full_name']) ?></td>
                             <td><?= h($order['course_code_snapshot']) ?></td>
                             <td><?= money($order['price_snapshot']) ?></td>
-                            <td><?= status_badge($order['payment_status']) ?></td>
                             <td><?= status_badge($order['collection_status']) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
+        <?php if (!$recent): ?>
+            <div class="alert alert-info mb-0">No paid orders have been recorded yet.</div>
+        <?php endif; ?>
     </div>
 </main>
 <?php page_footer(); ?>

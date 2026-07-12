@@ -15,6 +15,7 @@
 - Added a paid-list delete action for admins after handout collection.
 - Added paid-order filtering and paid totals grouped by handout.
 - Simplified order payment status to only `paid` or `not_paid`.
+- Changed admin order views so the main list shows only paid students while incomplete payment details remain recorded.
 
 ### Checks Performed
 
@@ -29,6 +30,7 @@
 - Ran PHP syntax checks for paid handout filtering.
 - Created temporary paid orders for Database Systems and Computer Networking, confirmed the paid summary grouped them separately, confirmed the handout filter showed only the selected handout, and cleaned up the temporary records.
 - Ran the database migration, confirmed the orders status enum is only `not_paid` and `paid`, and verified the dashboard/orders pages no longer show pending payment.
+- Ran PHP syntax checks and verified in the browser that the admin paid list excludes incomplete-payment students and no longer shows a payment status filter or column.
 
 ### Blockers
 
