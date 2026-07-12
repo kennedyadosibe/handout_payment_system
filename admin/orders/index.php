@@ -3,11 +3,54 @@
 require_once __DIR__ . '/../../app/bootstrap.php';
 require_once __DIR__ . '/../../app/layout.php';
 
-require_admin();
+$admin = require_admin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? 'update_collection';
+    $orderId = (int) ($_POST['order_id'] ?? 0);
+
+    if ($action === 'delete_paid_order') {
+        $stmt = db()->prepare('SELECT o.*, s.full_name
+            FROM orders o
+            JOIN students s ON s.student_id = o.student_id
+            WHERE o.order_id = ?');
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+
+        if (!$order) {
+            flash('Order not found.', 'warning');
+            redirect('/Handout%20Payment%20System/admin/orders/index.php');
+        }
+
+        if ($order['payment_status'] !== 'paid') {
+            flash('Only paid students can be deleted from the paid list.', 'warning');
+            redirect('/Handout%20Payment%20System/admin/orders/index.php');
+        }
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('DELETE FROM payments WHERE order_id = ?');
+            $stmt->execute([$orderId]);
+
+            $stmt = $pdo->prepare('DELETE FROM orders WHERE order_id = ?');
+            $stmt->execute([$orderId]);
+
+            $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$admin['admin_id'], 'delete paid student from orders list', 'orders', $order['order_reference']]);
+
+            $pdo->commit();
+            flash($order['full_name'] . ' has been deleted from the paid list.');
+        } catch (Throwable $exception) {
+            $pdo->rollBack();
+            flash('Paid student could not be deleted from the list. Please try again.', 'danger');
+        }
+
+        redirect('/Handout%20Payment%20System/admin/orders/index.php');
+    }
+
     $stmt = db()->prepare('UPDATE orders SET collection_status = ? WHERE order_id = ?');
-    $stmt->execute([$_POST['collection_status'], (int) $_POST['order_id']]);
+    $stmt->execute([$_POST['collection_status'], $orderId]);
     flash('Collection status updated.');
     redirect('/Handout%20Payment%20System/admin/orders/index.php');
 }
@@ -74,6 +117,7 @@ page_header('Orders');
                         <th>Amount</th>
                         <th>Payment</th>
                         <th>Collection</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -88,6 +132,7 @@ page_header('Orders');
                             <td>
                                 <form method="post" class="d-flex gap-2">
                                     <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                    <input type="hidden" name="action" value="update_collection">
                                     <select class="form-select form-select-sm" name="collection_status" <?= $order['payment_status'] !== 'paid' ? 'disabled' : '' ?>>
                                         <?php foreach (['not_ready', 'ready_for_collection', 'collected'] as $status): ?>
                                             <option value="<?= h($status) ?>" <?= $order['collection_status'] === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
@@ -95,6 +140,14 @@ page_header('Orders');
                                     </select>
                                     <button class="btn btn-sm btn-outline-primary" type="submit" <?= $order['payment_status'] !== 'paid' ? 'disabled' : '' ?>>Save</button>
                                 </form>
+                            </td>
+                            <td class="text-end">
+                                <?php if ($order['payment_status'] === 'paid'): ?>
+                                    <form method="post" onsubmit="return confirm('Delete this student from the paid list after giving the handout?');">
+                                        <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                        <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
+                                    </form>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
