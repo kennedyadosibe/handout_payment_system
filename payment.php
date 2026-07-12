@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/app/bootstrap.php';
 require_once __DIR__ . '/app/layout.php';
+require_once __DIR__ . '/app/paystack.php';
 
 $reference = trim($_GET['order'] ?? '');
 $stmt = db()->prepare('SELECT o.*, s.full_name, s.email, p.reference AS payment_reference, p.status AS payment_status_detail
@@ -18,20 +19,19 @@ if (!$order) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? 'success';
-    $pdo = db();
-    if ($action === 'success') {
-        $stmt = $pdo->prepare('UPDATE payments SET status = "successful", paid_at = NOW() WHERE order_id = ? AND amount = ?');
-        $stmt->execute([$order['order_id'], $order['price_snapshot']]);
-        $stmt = $pdo->prepare('UPDATE orders SET payment_status = "paid" WHERE order_id = ?');
-        $stmt->execute([$order['order_id']]);
-    } else {
-        $stmt = $pdo->prepare('UPDATE payments SET status = "failed" WHERE order_id = ?');
-        $stmt->execute([$order['order_id']]);
-        $stmt = $pdo->prepare('UPDATE orders SET payment_status = "not_paid" WHERE order_id = ?');
-        $stmt->execute([$order['order_id']]);
+    try {
+        $response = paystack_initialize_transaction($order);
+        $authorizationUrl = $response['data']['authorization_url'] ?? '';
+
+        if ($authorizationUrl === '') {
+            throw new RuntimeException('Paystack did not return a checkout URL.');
+        }
+
+        redirect($authorizationUrl);
+    } catch (Throwable $exception) {
+        flash('Payment could not start: ' . $exception->getMessage(), 'danger');
+        redirect('/Handout%20Payment%20System/payment.php?order=' . urlencode($order['order_reference']));
     }
-    redirect('/Handout%20Payment%20System/payment-result.php?order=' . urlencode($order['order_reference']));
 }
 
 page_header('Payment', 'handouts');
@@ -40,8 +40,8 @@ page_header('Payment', 'handouts');
     <div class="row justify-content-center">
         <div class="col-lg-7">
             <div class="bg-white border rounded-2 p-4">
-                <h1 class="h3">Test payment checkout</h1>
-                <p class="text-muted">This prototype simulates a gateway response. A production version should initialize and verify payment with a real Ghana-supported provider.</p>
+                <h1 class="h3">Pay with Paystack</h1>
+                <p class="text-muted">Confirm your order details, then continue to Paystack to complete payment securely.</p>
                 <dl class="row">
                     <dt class="col-sm-4">Student</dt>
                     <dd class="col-sm-8"><?= h($order['full_name']) ?></dd>
@@ -52,10 +52,13 @@ page_header('Payment', 'handouts');
                     <dt class="col-sm-4">Payment reference</dt>
                     <dd class="col-sm-8"><?= h($order['payment_reference']) ?></dd>
                 </dl>
-                <form method="post" class="d-flex gap-2 flex-wrap">
-                    <button class="btn btn-primary" name="action" value="success" type="submit">Simulate successful payment</button>
-                    <button class="btn btn-outline-danger" name="action" value="fail" type="submit">Simulate failed payment</button>
-                </form>
+                <?php if (paystack_configured()): ?>
+                    <form method="post">
+                        <button class="btn btn-primary btn-lg w-100" type="submit">Continue to Paystack</button>
+                    </form>
+                <?php else: ?>
+                    <div class="alert alert-warning mb-0">Paystack is not configured. Add your secret key to <code>config/payment.local.php</code>.</div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

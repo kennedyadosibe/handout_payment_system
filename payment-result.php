@@ -2,8 +2,10 @@
 
 require_once __DIR__ . '/app/bootstrap.php';
 require_once __DIR__ . '/app/layout.php';
+require_once __DIR__ . '/app/paystack.php';
 
 $reference = trim($_GET['order'] ?? '');
+$paystackReference = trim($_GET['reference'] ?? $_GET['trxref'] ?? '');
 $stmt = db()->prepare('SELECT o.*, s.full_name, s.email, s.phone, p.reference AS payment_reference, p.status AS gateway_status, p.paid_at
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
@@ -15,6 +17,36 @@ $order = $stmt->fetch();
 if (!$order) {
     flash('Order not found.', 'warning');
     redirect('/Handout%20Payment%20System/receipt.php');
+}
+
+if ($paystackReference !== '' && $order['payment_status'] !== 'paid') {
+    try {
+        $response = paystack_verify_transaction($paystackReference);
+        $data = $response['data'] ?? [];
+        $verifiedAmount = (int) ($data['amount'] ?? 0);
+        $verifiedStatus = $data['status'] ?? '';
+        $expectedAmount = paystack_amount_subunit($order['price_snapshot']);
+        $referenceMatches = hash_equals($order['payment_reference'], (string) ($data['reference'] ?? $paystackReference));
+
+        if ($verifiedStatus === 'success' && $verifiedAmount === $expectedAmount && $referenceMatches) {
+            $pdo = db();
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('UPDATE payments SET status = "successful", paid_at = NOW() WHERE order_id = ?');
+            $stmt->execute([$order['order_id']]);
+            $stmt = $pdo->prepare('UPDATE orders SET payment_status = "paid" WHERE order_id = ?');
+            $stmt->execute([$order['order_id']]);
+            $pdo->commit();
+            $order['payment_status'] = 'paid';
+            $order['gateway_status'] = 'successful';
+            $order['paid_at'] = date('Y-m-d H:i:s');
+        } else {
+            $stmt = db()->prepare('UPDATE payments SET status = ? WHERE order_id = ?');
+            $stmt->execute([$verifiedStatus === 'reversed' ? 'reversed' : 'failed', $order['order_id']]);
+            $order['gateway_status'] = $verifiedStatus === 'reversed' ? 'reversed' : 'failed';
+        }
+    } catch (Throwable $exception) {
+        flash('Payment verification failed: ' . $exception->getMessage(), 'danger');
+    }
 }
 
 page_header('Payment Result', 'receipt');
