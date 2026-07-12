@@ -23,6 +23,7 @@
 - Added dashboard revenue totals grouped by handout.
 - Added dashboard student-name search for paid handout groups.
 - Added per-handout student search boxes inside every paid handout list.
+- Added sidebar navigation so dashboard sections load one at a time.
 
 ### Checks Performed
 
@@ -45,6 +46,7 @@
 - Ran PHP syntax checks, created temporary paid rows for two handouts, confirmed dashboard revenue cards are split by handout and no global revenue card appears in the top stats, then cleaned up the temporary records.
 - Ran PHP syntax checks, created temporary paid rows across two handouts, confirmed searching by student name keeps matches under their handout and hides non-matches, confirmed the no-match message, and cleaned up the temporary records.
 - Ran PHP syntax checks, created temporary paid rows in one handout section, confirmed each handout list has its own search box, verified local search hides nonmatching rows only inside that section, and cleaned up the temporary records.
+- Ran PHP syntax checks and verified the dashboard sidebar can switch between overview, revenue, and paid-student panels.
 
 ### Blockers
 
