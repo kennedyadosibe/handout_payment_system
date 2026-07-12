@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/payment.php';
+
+$connectionError = null;
+try {
+    $serverDsn = 'mysql:host=' . DB_HOST . ';charset=utf8mb4';
+    $pdo = new PDO($serverDsn, DB_USER, DB_PASS, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+} catch (PDOException $exception) {
+    $connectionError = $exception->getMessage();
+}
+
+if ($connectionError !== null) {
+    ?>
+    <!doctype html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Setup Needs Database Access</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-light">
+    <main class="container py-5">
+        <div class="bg-white border rounded-3 p-4 mx-auto" style="max-width: 760px;">
+            <h1 class="h3">Database connection failed</h1>
+            <p class="text-muted">Update the database settings in <code>config/database.php</code>, then reload this setup page.</p>
+            <div class="alert alert-warning mb-0"><?= htmlspecialchars($connectionError, ENT_QUOTES, 'UTF-8') ?></div>
+        </div>
+    </main>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+$schema = file_get_contents(__DIR__ . '/database/schema.sql');
+$pdo->exec($schema);
+$db = db();
+
+$adminHash = password_hash('change-me-course-rep', PASSWORD_DEFAULT);
+$stmt = $db->prepare('INSERT IGNORE INTO admins (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)');
+$stmt->execute(['Course Representative', 'course.rep@example.test', $adminHash, 'course_rep', 'active']);
+
+$handouts = [
+    ['Database Systems', 'H001', 'Relational models, SQL design, normalization and transaction concepts.', 40.00],
+    ['Computer Networking', 'H002', 'Network models, addressing, routing basics and practical configuration notes.', 50.00],
+    ['Java Programming', 'H003', 'Core Java syntax, object-oriented programming and practice exercises.', 35.00],
+];
+
+$stmt = $db->prepare('INSERT INTO handouts (title, course_code, description, current_price, status, created_by)
+    SELECT ?, ?, ?, ?, "available", 1
+    WHERE NOT EXISTS (SELECT 1 FROM handouts WHERE course_code = ?)');
+foreach ($handouts as $handout) {
+    $stmt->execute([$handout[0], $handout[1], $handout[2], $handout[3], $handout[1]]);
+}
+
+?>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Setup Complete</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<main class="container py-5">
+    <div class="setup-card bg-white border rounded-3 p-4 mx-auto" style="max-width: 720px;">
+        <h1 class="h3">Setup complete</h1>
+        <p class="text-muted">The database, sample handouts and default admin user are ready.</p>
+        <div class="alert alert-info">
+            <strong>Admin email:</strong> course.rep@example.test<br>
+            <strong>Password:</strong> change-me-course-rep
+        </div>
+        <a class="btn btn-primary" href="/Handout%20Payment%20System/">Open Website</a>
+        <a class="btn btn-outline-primary" href="/Handout%20Payment%20System/admin/login.php">Admin Login</a>
+    </div>
+</main>
+</body>
+</html>
