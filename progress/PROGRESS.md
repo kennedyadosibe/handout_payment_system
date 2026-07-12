@@ -9,11 +9,13 @@
 - Added project agent rules in `AGENTS.md`.
 - Added feature documentation structure in `docs/features/`.
 - Added progress tracking structure in `progress/`.
+- Added a golden visual theme with subtle star spotting across the site.
 
 ### Checks Performed
 
 - Ran PHP syntax checks across the project with `C:\xampp\php\php.exe`.
 - Confirmed setup page handles database connection failure without a fatal crash.
+- Refreshed the local site in the in-app browser and confirmed the golden theme and star spotting are visible.
 
 ### Blockers
 

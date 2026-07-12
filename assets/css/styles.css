@@ -1,20 +1,43 @@
+:root {
+    --gold: #d8a928;
+    --gold-bright: #f6d978;
+    --gold-soft: #fff4c8;
+    --ink: #1b1820;
+    --midnight: #16151d;
+    --panel: #fffaf0;
+    --line: #ead89b;
+}
+
 body {
-    background: #f6f8fb;
-    color: #1d2636;
+    background:
+        radial-gradient(circle at 12% 18%, rgba(246, 217, 120, .32) 0 2px, transparent 3px),
+        radial-gradient(circle at 84% 12%, rgba(255, 244, 200, .55) 0 1px, transparent 2px),
+        radial-gradient(circle at 72% 52%, rgba(246, 217, 120, .28) 0 2px, transparent 3px),
+        radial-gradient(circle at 22% 78%, rgba(255, 244, 200, .48) 0 1px, transparent 2px),
+        linear-gradient(180deg, #fffaf0 0%, #f8efd8 46%, #fffdf7 100%);
+    color: var(--ink);
+}
+
+.navbar {
+    background: rgba(255, 250, 240, .95) !important;
 }
 
 .navbar-brand {
-    color: #0d5c63;
+    color: #8a6409;
 }
 
 .nav-link.active {
-    color: #0d5c63 !important;
+    color: #8a6409 !important;
     font-weight: 700;
 }
 
 .hero {
     background:
-        linear-gradient(90deg, rgba(13, 92, 99, .94), rgba(38, 70, 83, .82)),
+        radial-gradient(circle at 20% 24%, rgba(246, 217, 120, .9) 0 2px, transparent 3px),
+        radial-gradient(circle at 72% 18%, rgba(255, 244, 200, .95) 0 1px, transparent 2px),
+        radial-gradient(circle at 82% 68%, rgba(246, 217, 120, .75) 0 2px, transparent 3px),
+        radial-gradient(circle at 38% 76%, rgba(255, 244, 200, .8) 0 1px, transparent 2px),
+        linear-gradient(90deg, rgba(27, 24, 32, .93), rgba(116, 82, 9, .82)),
         url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1800&q=80') center/cover;
     color: #fff;
     min-height: 460px;
@@ -33,8 +56,39 @@ body {
     color: rgba(255, 255, 255, .88);
 }
 
+.btn-primary {
+    --bs-btn-bg: #b8840b;
+    --bs-btn-border-color: #b8840b;
+    --bs-btn-hover-bg: #916805;
+    --bs-btn-hover-border-color: #916805;
+    --bs-btn-active-bg: #745306;
+    --bs-btn-active-border-color: #745306;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: #8a6409;
+    --bs-btn-border-color: #b8840b;
+    --bs-btn-hover-bg: #b8840b;
+    --bs-btn-hover-border-color: #b8840b;
+    --bs-btn-active-bg: #745306;
+    --bs-btn-active-border-color: #745306;
+}
+
+.bg-white,
+.card,
+.alert,
+.form-control,
+.form-select {
+    background-color: var(--panel) !important;
+}
+
+.border,
+.card {
+    border-color: var(--line) !important;
+}
+
 .stat {
-    border-left: 4px solid #0d5c63;
+    border-left: 4px solid var(--gold);
 }
 
 .handout-card {
@@ -44,26 +98,27 @@ body {
 
 .handout-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 .75rem 1.6rem rgba(31, 41, 55, .09);
+    box-shadow: 0 .75rem 1.6rem rgba(116, 83, 6, .16);
 }
 
 .price-pill {
-    background: #e8f4f3;
-    color: #0d5c63;
+    background: linear-gradient(135deg, var(--gold-soft), var(--gold-bright));
+    color: #684906;
     border-radius: 999px;
     padding: .35rem .75rem;
     font-weight: 700;
+    border: 1px solid rgba(184, 132, 11, .28);
 }
 
 .dashboard-card {
     border: 0;
     border-radius: .5rem;
-    box-shadow: 0 .5rem 1.25rem rgba(31, 41, 55, .07);
+    box-shadow: 0 .5rem 1.25rem rgba(116, 83, 6, .11);
 }
 
 .table thead th {
-    background: #edf3f4;
-    color: #273444;
+    background: #f7e6ad;
+    color: #4d3706;
     font-size: .86rem;
     text-transform: uppercase;
 }
@@ -73,5 +128,5 @@ body {
 }
 
 .receipt-box {
-    border-left: 5px solid #0d5c63;
+    border-left: 5px solid var(--gold);
 }
