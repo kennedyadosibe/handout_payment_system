@@ -3,10 +3,9 @@
 require_once __DIR__ . '/../../app/bootstrap.php';
 require_once __DIR__ . '/../../app/layout.php';
 
-require_admin();
+$admin = require_admin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $admin = require_admin();
     $handoutId = (int) ($_POST['handout_id'] ?? 0);
     $action = $_POST['action'] ?? '';
 
@@ -20,6 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$handout) {
         flash('Handout not found.', 'warning');
+        redirect('/Handout%20Payment%20System/admin/handouts/index.php');
+    }
+    if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $handout['course_id'])) {
+        flash('You can only manage handouts for your assigned courses.', 'warning');
         redirect('/Handout%20Payment%20System/admin/handouts/index.php');
     }
 
@@ -69,11 +72,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$handouts = db()->query('SELECT h.*, COUNT(o.order_id) AS order_count
+$handoutSql = 'SELECT h.*, c.title AS campus_course_title, d.code AS department_code, l.name AS level_name, COUNT(o.order_id) AS order_count
     FROM handouts h
-    LEFT JOIN orders o ON o.handout_id = h.handout_id
-    GROUP BY h.handout_id
-    ORDER BY h.created_at DESC')->fetchAll();
+    LEFT JOIN courses c ON c.course_id = h.course_id
+    LEFT JOIN departments d ON d.department_id = h.department_id
+    LEFT JOIN academic_levels l ON l.level_id = h.level_id
+    LEFT JOIN orders o ON o.handout_id = h.handout_id';
+$handoutParams = [];
+if (!is_super_admin($admin)) {
+    $handoutSql .= ' JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $handoutParams[] = (int) $admin['admin_id'];
+}
+$handoutSql .= ' GROUP BY h.handout_id ORDER BY h.created_at DESC';
+$stmt = db()->prepare($handoutSql);
+$stmt->execute($handoutParams);
+$handouts = $stmt->fetchAll();
 
 page_header('Manage Handouts');
 ?>
@@ -98,7 +111,15 @@ page_header('Manage Handouts');
                 <tbody>
                     <?php foreach ($handouts as $handout): ?>
                         <tr>
-                            <td><?= h($handout['course_code']) ?></td>
+                            <td>
+                                <?= h($handout['course_code']) ?><br>
+                                <span class="text-muted small">
+                                    <?= h($handout['campus_course_title'] ?? 'No campus course') ?>
+                                    <?php if (!empty($handout['department_code']) || !empty($handout['level_name'])): ?>
+                                        · <?= h(trim(($handout['department_code'] ?? '') . ' ' . ($handout['level_name'] ?? ''))) ?>
+                                    <?php endif; ?>
+                                </span>
+                            </td>
                             <td><?= h($handout['title']) ?></td>
                             <td><?= money($handout['current_price']) ?></td>
                             <td><?= status_badge($handout['status']) ?></td>

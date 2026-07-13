@@ -81,6 +81,7 @@
 - Added a super-admin Campus setup dashboard panel for departments and levels.
 - Added course creation and course listing to the Campus setup dashboard panel.
 - Added course representative account creation and course assignment in Campus setup.
+- Connected handout creation and management to official campus course records.
 
 ### Checks Performed
 
@@ -94,7 +95,9 @@
 - Created and removed temporary department and level records through the Campus setup workflow.
 - Created and removed a temporary course through the Campus setup workflow.
 - Created and removed a temporary course representative account with a course assignment through the Campus setup workflow.
+- Created and removed a temporary handout tied to a selected campus course.
+- Created and removed a temporary course representative, then confirmed the handout editor only showed the assigned course.
 
 ### Next Steps
 
-- Connect handout creation to campus courses so reps can manage the handouts assigned to their courses.
+- Add student-side filtering by department, level, and course so students see only the handouts for their class.

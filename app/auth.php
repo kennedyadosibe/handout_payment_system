@@ -29,6 +29,54 @@ function is_super_admin(?array $admin = null): bool
     return ($admin['role'] ?? '') === 'super_admin';
 }
 
+function manageable_courses_for_admin(array $admin): array
+{
+    if (is_super_admin($admin)) {
+        return db()->query('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
+            FROM courses c
+            JOIN departments d ON d.department_id = c.department_id
+            JOIN academic_levels l ON l.level_id = c.level_id
+            WHERE c.status = "active"
+            ORDER BY d.name, l.sort_order, c.course_code')->fetchAll();
+    }
+
+    $stmt = db()->prepare('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
+        FROM admin_course_assignments aca
+        JOIN courses c ON c.course_id = aca.course_id
+        JOIN departments d ON d.department_id = c.department_id
+        JOIN academic_levels l ON l.level_id = c.level_id
+        WHERE aca.admin_id = ? AND c.status = "active"
+        ORDER BY d.name, l.sort_order, c.course_code');
+    $stmt->execute([(int) $admin['admin_id']]);
+    return $stmt->fetchAll();
+}
+
+function manageable_course_for_admin(array $admin, int $courseId): ?array
+{
+    if ($courseId <= 0) {
+        return null;
+    }
+
+    if (is_super_admin($admin)) {
+        $stmt = db()->prepare('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
+            FROM courses c
+            JOIN departments d ON d.department_id = c.department_id
+            JOIN academic_levels l ON l.level_id = c.level_id
+            WHERE c.course_id = ? AND c.status = "active"');
+        $stmt->execute([$courseId]);
+        return $stmt->fetch() ?: null;
+    }
+
+    $stmt = db()->prepare('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
+        FROM admin_course_assignments aca
+        JOIN courses c ON c.course_id = aca.course_id
+        JOIN departments d ON d.department_id = c.department_id
+        JOIN academic_levels l ON l.level_id = c.level_id
+        WHERE aca.admin_id = ? AND c.course_id = ? AND c.status = "active"');
+    $stmt->execute([(int) $admin['admin_id'], $courseId]);
+    return $stmt->fetch() ?: null;
+}
+
 function require_super_admin(): array
 {
     $admin = require_admin();

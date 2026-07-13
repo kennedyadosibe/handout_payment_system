@@ -10,9 +10,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $orderId = (int) ($_POST['order_id'] ?? 0);
 
     if ($action === 'delete_paid_order') {
-        $stmt = db()->prepare('SELECT o.*, s.full_name
+        $stmt = db()->prepare('SELECT o.*, s.full_name, h.course_id
             FROM orders o
             JOIN students s ON s.student_id = o.student_id
+            JOIN handouts h ON h.handout_id = o.handout_id
             WHERE o.order_id = ?');
         $stmt->execute([$orderId]);
         $order = $stmt->fetch();
@@ -24,6 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($order['payment_status'] !== 'paid') {
             flash('Only paid students can be deleted from the paid list.', 'warning');
+            redirect('/Handout%20Payment%20System/admin/orders/index.php');
+        }
+        if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $order['course_id'])) {
+            flash('You can only update orders for your assigned courses.', 'warning');
             redirect('/Handout%20Payment%20System/admin/orders/index.php');
         }
 
@@ -49,8 +54,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/Handout%20Payment%20System/admin/orders/index.php');
     }
 
+    $collectionStatus = $_POST['collection_status'] ?? '';
+    if (!in_array($collectionStatus, ['not_ready', 'ready_for_collection', 'collected'], true)) {
+        flash('Collection status is invalid.', 'warning');
+        redirect('/Handout%20Payment%20System/admin/orders/index.php');
+    }
+
+    $stmt = db()->prepare('SELECT h.course_id
+        FROM orders o
+        JOIN handouts h ON h.handout_id = o.handout_id
+        WHERE o.order_id = ? AND o.payment_status = "paid"');
+    $stmt->execute([$orderId]);
+    $orderCourseId = (int) $stmt->fetchColumn();
+    if ($orderCourseId <= 0 || (!is_super_admin($admin) && !manageable_course_for_admin($admin, $orderCourseId))) {
+        flash('You can only update orders for your assigned courses.', 'warning');
+        redirect('/Handout%20Payment%20System/admin/orders/index.php');
+    }
+
     $stmt = db()->prepare('UPDATE orders SET collection_status = ? WHERE order_id = ?');
-    $stmt->execute([$_POST['collection_status'], $orderId]);
+    $stmt->execute([$collectionStatus, $orderId]);
     flash('Collection status updated.');
     redirect('/Handout%20Payment%20System/admin/orders/index.php');
 }
@@ -60,6 +82,10 @@ $params = [];
 $selectedHandoutId = (int) ($_GET['handout_id'] ?? 0);
 $where[] = 'o.payment_status = ?';
 $params[] = 'paid';
+if (!is_super_admin($admin)) {
+    $where[] = 'aca.admin_id = ?';
+    $params[] = (int) $admin['admin_id'];
+}
 if ($selectedHandoutId > 0) {
     $where[] = 'o.handout_id = ?';
     $params[] = $selectedHandoutId;
@@ -70,19 +96,43 @@ if (!empty($_GET['q'])) {
     array_push($params, $search, $search, $search, $search);
 }
 
-$handouts = db()->query('SELECT handout_id, title, course_code FROM handouts ORDER BY course_code, title')->fetchAll();
+$handoutSql = 'SELECT h.handout_id, h.title, h.course_code
+    FROM handouts h';
+$handoutParams = [];
+if (!is_super_admin($admin)) {
+    $handoutSql .= ' JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $handoutParams[] = (int) $admin['admin_id'];
+}
+$handoutSql .= ' ORDER BY h.course_code, h.title';
+$stmt = db()->prepare($handoutSql);
+$stmt->execute($handoutParams);
+$handouts = $stmt->fetchAll();
 
-$paidSummary = db()->query('SELECT o.handout_id, o.course_code_snapshot, o.handout_title_snapshot,
+$paidSummarySql = 'SELECT o.handout_id, o.course_code_snapshot, o.handout_title_snapshot,
         COUNT(*) AS paid_count,
         COALESCE(SUM(o.price_snapshot), 0) AS paid_total
     FROM orders o
-    WHERE o.payment_status = "paid"
+';
+$paidSummaryParams = [];
+if (!is_super_admin($admin)) {
+    $paidSummarySql .= 'JOIN handouts h ON h.handout_id = o.handout_id
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $paidSummaryParams[] = (int) $admin['admin_id'];
+}
+$paidSummarySql .= ' WHERE o.payment_status = "paid"
     GROUP BY o.handout_id, o.course_code_snapshot, o.handout_title_snapshot
-    ORDER BY o.course_code_snapshot, o.handout_title_snapshot')->fetchAll();
+    ORDER BY o.course_code_snapshot, o.handout_title_snapshot';
+$stmt = db()->prepare($paidSummarySql);
+$stmt->execute($paidSummaryParams);
+$paidSummary = $stmt->fetchAll();
 
 $sql = 'SELECT o.*, s.full_name, s.index_number, s.phone, s.email
     FROM orders o
     JOIN students s ON s.student_id = o.student_id';
+if (!is_super_admin($admin)) {
+    $sql .= ' JOIN handouts h ON h.handout_id = o.handout_id
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id';
+}
 if ($where) {
     $sql .= ' WHERE ' . implode(' AND ', $where);
 }

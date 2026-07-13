@@ -161,6 +161,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Handout not found.', 'warning');
             redirect($returnUrl);
         }
+        if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $handout['course_id'])) {
+            flash('You can only manage handouts for your assigned courses.', 'warning');
+            redirect($returnUrl);
+        }
 
         $pdo->beginTransaction();
         try {
@@ -189,30 +193,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'save_handout') {
-        $data = [
-            trim($_POST['title'] ?? ''),
-            trim($_POST['course_code'] ?? ''),
-            trim($_POST['description'] ?? ''),
-            (float) ($_POST['current_price'] ?? 0),
-            $_POST['status'] ?? 'available',
-        ];
+        $title = trim($_POST['title'] ?? '');
+        $courseId = (int) ($_POST['course_id'] ?? 0);
+        $description = trim($_POST['description'] ?? '');
+        $currentPrice = (float) ($_POST['current_price'] ?? 0);
+        $status = $_POST['status'] ?? 'available';
         $saveUrl = $dashboardBaseUrl . '?panel=edit-handout';
         if ($handoutId > 0) {
             $saveUrl .= '&handout_id=' . $handoutId;
         }
 
-        if ($data[0] === '' || $data[1] === '' || $data[2] === '' || $data[3] <= 0 || !in_array($data[4], ['available', 'unavailable', 'archived'], true)) {
+        if ($title === '' || $description === '' || $currentPrice <= 0 || !in_array($status, ['available', 'unavailable', 'archived'], true)) {
             flash('Please complete all fields with a valid price.', 'danger');
             redirect($saveUrl);
         }
 
+        $course = manageable_course_for_admin($admin, $courseId);
+        if (!$course) {
+            flash('Select a valid course you are allowed to manage.', 'danger');
+            redirect($saveUrl);
+        }
+
         if ($handoutId > 0) {
-            $stmt = $pdo->prepare('UPDATE handouts SET title = ?, course_code = ?, description = ?, current_price = ?, status = ? WHERE handout_id = ?');
-            $stmt->execute([...$data, $handoutId]);
+            $stmt = $pdo->prepare('SELECT * FROM handouts WHERE handout_id = ?');
+            $stmt->execute([$handoutId]);
+            $existingHandout = $stmt->fetch();
+            if (!$existingHandout || (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $existingHandout['course_id']))) {
+                flash('You can only update handouts for your assigned courses.', 'warning');
+                redirect($dashboardBaseUrl . '?panel=manage-handouts');
+            }
+
+            $stmt = $pdo->prepare('UPDATE handouts
+                SET department_id = ?, level_id = ?, course_id = ?, title = ?, course_code = ?, description = ?, current_price = ?, status = ?
+                WHERE handout_id = ?');
+            $stmt->execute([
+                (int) $course['department_id'],
+                (int) $course['level_id'],
+                (int) $course['course_id'],
+                $title,
+                $course['course_code'],
+                $description,
+                $currentPrice,
+                $status,
+                $handoutId,
+            ]);
             flash('Handout updated.');
         } else {
-            $stmt = $pdo->prepare('INSERT INTO handouts (title, course_code, description, current_price, status, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-            $stmt->execute([...$data, $admin['admin_id']]);
+            $stmt = $pdo->prepare('INSERT INTO handouts
+                (department_id, level_id, course_id, title, course_code, description, current_price, status, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([
+                (int) $course['department_id'],
+                (int) $course['level_id'],
+                (int) $course['course_id'],
+                $title,
+                $course['course_code'],
+                $description,
+                $currentPrice,
+                $status,
+                $admin['admin_id'],
+            ]);
             flash('Handout added.');
         }
 
@@ -220,15 +260,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'delete_paid_order') {
-        $stmt = $pdo->prepare('SELECT o.*, s.full_name
+        $stmt = $pdo->prepare('SELECT o.*, s.full_name, h.course_id
             FROM orders o
             JOIN students s ON s.student_id = o.student_id
+            JOIN handouts h ON h.handout_id = o.handout_id
             WHERE o.order_id = ?');
         $stmt->execute([$orderId]);
         $order = $stmt->fetch();
 
         if (!$order || $order['payment_status'] !== 'paid') {
             flash('Paid student record not found.', 'warning');
+            redirect($returnUrl);
+        }
+        if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $order['course_id'])) {
+            flash('You can only update orders for your assigned courses.', 'warning');
             redirect($returnUrl);
         }
 
@@ -260,6 +305,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect($returnUrl);
         }
 
+        $stmt = $pdo->prepare('SELECT h.course_id
+            FROM orders o
+            JOIN handouts h ON h.handout_id = o.handout_id
+            WHERE o.order_id = ? AND o.payment_status = "paid"');
+        $stmt->execute([$orderId]);
+        $orderCourseId = (int) $stmt->fetchColumn();
+        if ($orderCourseId <= 0 || (!is_super_admin($admin) && !manageable_course_for_admin($admin, $orderCourseId))) {
+            flash('You can only update orders for your assigned courses.', 'warning');
+            redirect($returnUrl);
+        }
+
         $stmt = $pdo->prepare('UPDATE orders SET collection_status = ? WHERE order_id = ? AND payment_status = "paid"');
         $stmt->execute([$collectionStatus, $orderId]);
         flash('Collection status updated.');
@@ -267,15 +323,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'mark_collected') {
-        $stmt = $pdo->prepare('SELECT o.*, s.full_name
+        $stmt = $pdo->prepare('SELECT o.*, s.full_name, h.course_id
             FROM orders o
             JOIN students s ON s.student_id = o.student_id
+            JOIN handouts h ON h.handout_id = o.handout_id
             WHERE o.order_id = ?');
         $stmt->execute([$orderId]);
         $order = $stmt->fetch();
 
         if (!$order || $order['payment_status'] !== 'paid') {
             flash('Paid student record not found.', 'warning');
+            redirect($returnUrl);
+        }
+        if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $order['course_id'])) {
+            flash('You can only update orders for your assigned courses.', 'warning');
             redirect($returnUrl);
         }
 
@@ -298,12 +359,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stats = [
-    'total_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts')->fetchColumn(),
-    'available_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn(),
-    'paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
-    'recorded_unpaid' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
-];
+$manageableCourses = manageable_courses_for_admin($admin);
+$stats = [];
+if (is_super_admin($admin)) {
+    $stats = [
+        'total_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts')->fetchColumn(),
+        'available_handouts' => (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn(),
+        'paid_orders' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn(),
+        'recorded_unpaid' => (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "not_paid"')->fetchColumn(),
+    ];
+} else {
+    $stmt = $pdo->prepare('SELECT
+            COUNT(*) AS total_handouts,
+            SUM(h.status = "available") AS available_handouts
+        FROM handouts h
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id
+        WHERE aca.admin_id = ?');
+    $stmt->execute([(int) $admin['admin_id']]);
+    $handoutStats = $stmt->fetch() ?: ['total_handouts' => 0, 'available_handouts' => 0];
+
+    $stmt = $pdo->prepare('SELECT
+            SUM(o.payment_status = "paid") AS paid_orders,
+            SUM(o.payment_status = "not_paid") AS recorded_unpaid
+        FROM orders o
+        JOIN handouts h ON h.handout_id = o.handout_id
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id
+        WHERE aca.admin_id = ?');
+    $stmt->execute([(int) $admin['admin_id']]);
+    $orderStats = $stmt->fetch() ?: ['paid_orders' => 0, 'recorded_unpaid' => 0];
+
+    $stats = [
+        'total_handouts' => (int) ($handoutStats['total_handouts'] ?? 0),
+        'available_handouts' => (int) ($handoutStats['available_handouts'] ?? 0),
+        'paid_orders' => (int) ($orderStats['paid_orders'] ?? 0),
+        'recorded_unpaid' => (int) ($orderStats['recorded_unpaid'] ?? 0),
+    ];
+}
 $editHandoutId = (int) ($_GET['handout_id'] ?? 0);
 $editHandout = null;
 if ($editHandoutId > 0) {
@@ -314,30 +405,72 @@ if ($editHandoutId > 0) {
         flash('Handout not found.', 'warning');
         redirect($dashboardBaseUrl . '?panel=manage-handouts');
     }
+    if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $editHandout['course_id'])) {
+        flash('You can only edit handouts for your assigned courses.', 'warning');
+        redirect($dashboardBaseUrl . '?panel=manage-handouts');
+    }
 }
 $studentSearch = trim($_GET['student_name'] ?? '');
-$revenueByHandout = $pdo->query('SELECT handout_id, course_code_snapshot, handout_title_snapshot,
+$revenueSql = 'SELECT o.handout_id, o.course_code_snapshot, o.handout_title_snapshot,
         COUNT(*) AS paid_count,
-        COALESCE(SUM(price_snapshot), 0) AS total_revenue
-    FROM orders
-    WHERE payment_status = "paid"
-    GROUP BY handout_id, course_code_snapshot, handout_title_snapshot
-    ORDER BY course_code_snapshot, handout_title_snapshot')->fetchAll();
-$dashboardHandouts = $pdo->query('SELECT h.*, COUNT(o.order_id) AS order_count
+        COALESCE(SUM(o.price_snapshot), 0) AS total_revenue
+    FROM orders o';
+$revenueParams = [];
+if (!is_super_admin($admin)) {
+    $revenueSql .= ' JOIN handouts h ON h.handout_id = o.handout_id
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $revenueParams[] = (int) $admin['admin_id'];
+}
+$revenueSql .= ' WHERE o.payment_status = "paid"
+    GROUP BY o.handout_id, o.course_code_snapshot, o.handout_title_snapshot
+    ORDER BY o.course_code_snapshot, o.handout_title_snapshot';
+$stmt = $pdo->prepare($revenueSql);
+$stmt->execute($revenueParams);
+$revenueByHandout = $stmt->fetchAll();
+$dashboardHandoutSql = 'SELECT h.*, c.title AS campus_course_title, d.code AS department_code, l.name AS level_name, COUNT(o.order_id) AS order_count
     FROM handouts h
-    LEFT JOIN orders o ON o.handout_id = h.handout_id
-    GROUP BY h.handout_id
-    ORDER BY h.created_at DESC')->fetchAll();
-$dashboardOrders = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone, s.email
+    LEFT JOIN courses c ON c.course_id = h.course_id
+    LEFT JOIN departments d ON d.department_id = h.department_id
+    LEFT JOIN academic_levels l ON l.level_id = h.level_id
+    LEFT JOIN orders o ON o.handout_id = h.handout_id';
+$dashboardHandoutParams = [];
+if (!is_super_admin($admin)) {
+    $dashboardHandoutSql .= ' JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $dashboardHandoutParams[] = (int) $admin['admin_id'];
+}
+$dashboardHandoutSql .= ' GROUP BY h.handout_id ORDER BY h.created_at DESC';
+$stmt = $pdo->prepare($dashboardHandoutSql);
+$stmt->execute($dashboardHandoutParams);
+$dashboardHandouts = $stmt->fetchAll();
+$dashboardOrdersSql = 'SELECT o.*, s.full_name, s.index_number, s.phone, s.email
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
-    WHERE o.payment_status = "paid"
-    ORDER BY o.ordered_at DESC')->fetchAll();
-$incompleteOrders = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phone, s.email
+';
+$dashboardOrderParams = [];
+if (!is_super_admin($admin)) {
+    $dashboardOrdersSql .= 'JOIN handouts h ON h.handout_id = o.handout_id
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $dashboardOrderParams[] = (int) $admin['admin_id'];
+}
+$dashboardOrdersSql .= ' WHERE o.payment_status = "paid" ORDER BY o.ordered_at DESC';
+$stmt = $pdo->prepare($dashboardOrdersSql);
+$stmt->execute($dashboardOrderParams);
+$dashboardOrders = $stmt->fetchAll();
+
+$incompleteOrdersSql = 'SELECT o.*, s.full_name, s.index_number, s.phone, s.email
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
-    WHERE o.payment_status = "not_paid"
-    ORDER BY o.ordered_at DESC')->fetchAll();
+';
+$incompleteOrderParams = [];
+if (!is_super_admin($admin)) {
+    $incompleteOrdersSql .= 'JOIN handouts h ON h.handout_id = o.handout_id
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $incompleteOrderParams[] = (int) $admin['admin_id'];
+}
+$incompleteOrdersSql .= ' WHERE o.payment_status = "not_paid" ORDER BY o.ordered_at DESC';
+$stmt = $pdo->prepare($incompleteOrdersSql);
+$stmt->execute($incompleteOrderParams);
+$incompleteOrders = $stmt->fetchAll();
 $departments = $pdo->query('SELECT * FROM departments ORDER BY name')->fetchAll();
 $levels = $pdo->query('SELECT * FROM academic_levels ORDER BY sort_order, name')->fetchAll();
 $courses = $pdo->query('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
@@ -358,9 +491,14 @@ $courseReps = $pdo->query('SELECT a.admin_id, a.name, a.email, a.status, d.name 
     ORDER BY a.name')->fetchAll();
 $paidSql = 'SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
-    JOIN students s ON s.student_id = o.student_id
-    WHERE o.payment_status = "paid"';
+    JOIN students s ON s.student_id = o.student_id';
 $paidParams = [];
+if (!is_super_admin($admin)) {
+    $paidSql .= ' JOIN handouts h ON h.handout_id = o.handout_id
+        JOIN admin_course_assignments aca ON aca.course_id = h.course_id AND aca.admin_id = ?';
+    $paidParams[] = (int) $admin['admin_id'];
+}
+$paidSql .= ' WHERE o.payment_status = "paid"';
 if ($studentSearch !== '') {
     $paidSql .= ' AND s.full_name LIKE ?';
     $paidParams[] = '%' . $studentSearch . '%';
@@ -901,7 +1039,15 @@ page_header('Admin Dashboard');
                             <tbody>
                                 <?php foreach ($dashboardHandouts as $handout): ?>
                                     <tr>
-                                        <td><?= h($handout['course_code']) ?></td>
+                                        <td>
+                                            <?= h($handout['course_code']) ?><br>
+                                            <span class="text-muted small">
+                                                <?= h($handout['campus_course_title'] ?? 'No campus course') ?>
+                                                <?php if (!empty($handout['department_code']) || !empty($handout['level_name'])): ?>
+                                                    · <?= h(trim(($handout['department_code'] ?? '') . ' ' . ($handout['level_name'] ?? ''))) ?>
+                                                <?php endif; ?>
+                                            </span>
+                                        </td>
                                         <td><?= h($handout['title']) ?></td>
                                         <td><?= money($handout['current_price']) ?></td>
                                         <td><?= status_badge($handout['status']) ?></td>
@@ -939,13 +1085,23 @@ page_header('Admin Dashboard');
                         <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="manage-handouts">Back to handouts</button>
                     </div>
                     <div class="row g-3">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <label class="form-label" for="title">Title</label>
                             <input class="form-control" id="title" name="title" value="<?= h($editHandout['title'] ?? '') ?>" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="course_code">Course code</label>
-                            <input class="form-control" id="course_code" name="course_code" value="<?= h($editHandout['course_code'] ?? '') ?>" required>
+                        <div class="col-md-6">
+                            <label class="form-label" for="course_id">Campus course</label>
+                            <select class="form-select" id="course_id" name="course_id" required>
+                                <option value="">Select campus course</option>
+                                <?php foreach ($manageableCourses as $course): ?>
+                                    <option value="<?= (int) $course['course_id'] ?>" <?= (int) ($editHandout['course_id'] ?? 0) === (int) $course['course_id'] ? 'selected' : '' ?>>
+                                        <?= h($course['course_code'] . ' - ' . $course['title'] . ' (' . $course['department_code'] . ', ' . $course['level_name'] . ')') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if (!$manageableCourses): ?>
+                                <div class="form-text text-danger">No campus courses are available for this admin yet.</div>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="current_price">Current price</label>
