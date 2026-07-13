@@ -327,6 +327,10 @@ body {
     font-weight: 700;
 }
 
+.password-toggle {
+    min-width: 64px;
+}
+
 .receipt-box {
     border-left: 5px solid var(--blue);
 }
