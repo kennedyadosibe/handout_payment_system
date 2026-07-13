@@ -44,13 +44,59 @@ $schema = file_get_contents(__DIR__ . '/database/schema.sql');
 $pdo->exec($schema);
 $db = db();
 
+function column_exists(PDO $db, string $table, string $column): bool
+{
+    $stmt = $db->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+    $stmt->execute([$table, $column]);
+    return (int) $stmt->fetchColumn() > 0;
+}
+
 $db->exec("ALTER TABLE orders MODIFY payment_status ENUM('not_paid', 'paid', 'pending_payment', 'cancelled', 'payment_failed') NOT NULL DEFAULT 'not_paid'");
 $db->exec("UPDATE orders SET payment_status = 'not_paid' WHERE payment_status IN ('pending_payment', 'cancelled', 'payment_failed')");
 $db->exec("ALTER TABLE orders MODIFY payment_status ENUM('not_paid', 'paid') NOT NULL DEFAULT 'not_paid'");
+$db->exec("ALTER TABLE admins MODIFY role ENUM('super_admin', 'course_rep') NOT NULL DEFAULT 'course_rep'");
+if (!column_exists($db, 'admins', 'department_id')) {
+    $db->exec('ALTER TABLE admins ADD department_id INT NULL AFTER status');
+}
+if (!column_exists($db, 'admins', 'level_id')) {
+    $db->exec('ALTER TABLE admins ADD level_id INT NULL AFTER department_id');
+}
+if (!column_exists($db, 'handouts', 'department_id')) {
+    $db->exec('ALTER TABLE handouts ADD department_id INT NULL AFTER handout_id');
+}
+if (!column_exists($db, 'handouts', 'level_id')) {
+    $db->exec('ALTER TABLE handouts ADD level_id INT NULL AFTER department_id');
+}
+if (!column_exists($db, 'handouts', 'course_id')) {
+    $db->exec('ALTER TABLE handouts ADD course_id INT NULL AFTER level_id');
+}
 
 $adminHash = password_hash('change-me-course-rep', PASSWORD_DEFAULT);
 $stmt = $db->prepare('INSERT IGNORE INTO admins (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)');
-$stmt->execute(['Course Representative', 'course.rep@example.test', $adminHash, 'course_rep', 'active']);
+$stmt->execute(['Super Admin', 'course.rep@example.test', $adminHash, 'super_admin', 'active']);
+$db->prepare('UPDATE admins SET role = "super_admin", name = ? WHERE email = ?')->execute(['Super Admin', 'course.rep@example.test']);
+
+$stmt = $db->prepare('INSERT INTO departments (name, code)
+    SELECT ?, ?
+    WHERE NOT EXISTS (SELECT 1 FROM departments WHERE code = ?)');
+$stmt->execute(['Computer Science', 'CS', 'CS']);
+
+$levels = [
+    ['Level 100', 100],
+    ['Level 200', 200],
+    ['Level 300', 300],
+    ['Level 400', 400],
+];
+$stmt = $db->prepare('INSERT INTO academic_levels (name, sort_order)
+    SELECT ?, ?
+    WHERE NOT EXISTS (SELECT 1 FROM academic_levels WHERE name = ?)');
+foreach ($levels as $level) {
+    $stmt->execute([$level[0], $level[1], $level[0]]);
+}
+
+$departmentId = (int) $db->query("SELECT department_id FROM departments WHERE code = 'CS' LIMIT 1")->fetchColumn();
+$levelId = (int) $db->query("SELECT level_id FROM academic_levels WHERE name = 'Level 200' LIMIT 1")->fetchColumn();
 
 $handouts = [
     ['Database Systems', 'H001', 'Relational models, SQL design, normalization and transaction concepts.', 40.00],
@@ -65,6 +111,21 @@ foreach ($handouts as $handout) {
     $stmt->execute([$handout[0], $handout[1], $handout[2], $handout[3], $handout[1]]);
 }
 
+$stmt = $db->prepare('INSERT INTO courses (department_id, level_id, course_code, title)
+    SELECT ?, ?, ?, ?
+    WHERE NOT EXISTS (
+        SELECT 1 FROM courses WHERE department_id = ? AND level_id = ? AND course_code = ?
+    )');
+foreach ($handouts as $handout) {
+    $stmt->execute([$departmentId, $levelId, $handout[1], $handout[0], $departmentId, $levelId, $handout[1]]);
+}
+
+$stmt = $db->prepare('UPDATE handouts h
+    JOIN courses c ON c.course_code = h.course_code
+    SET h.department_id = c.department_id, h.level_id = c.level_id, h.course_id = c.course_id
+    WHERE h.department_id IS NULL AND h.level_id IS NULL AND h.course_id IS NULL');
+$stmt->execute();
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -78,7 +139,7 @@ foreach ($handouts as $handout) {
 <main class="container py-5">
     <div class="setup-card bg-white border rounded-3 p-4 mx-auto" style="max-width: 720px;">
         <h1 class="h3">Setup complete</h1>
-        <p class="text-muted">The database, sample handouts and default admin user are ready.</p>
+        <p class="text-muted">The database, campus foundation, sample handouts and default super admin user are ready.</p>
         <div class="alert alert-info">
             <strong>Admin email:</strong> course.rep@example.test<br>
             <strong>Password:</strong> change-me-course-rep

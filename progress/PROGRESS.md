@@ -69,3 +69,21 @@
 - Configure local MySQL credentials.
 - Run `setup.php` from the browser.
 - Test the full student order flow and admin workflow.
+
+## 2026-07-13
+
+### Completed
+
+- Added the campus scope database foundation for departments, academic levels, courses, and course representative assignments.
+- Changed the default local admin account to a `super_admin`.
+- Added auth helper functions for super-admin checks.
+
+### Checks Performed
+
+- Ran PHP syntax checks for `setup.php`, `app/auth.php`, and `admin/login.php`.
+- Ran `setup.php` locally and verified the new campus tables and scope columns were created.
+- Confirmed `course.rep@example.test` is seeded as `super_admin`.
+
+### Next Steps
+
+- Add the super admin dashboard tools for creating departments, levels, courses, and course representatives.

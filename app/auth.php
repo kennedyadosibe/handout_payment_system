@@ -23,6 +23,23 @@ function require_admin(): array
     return $admin;
 }
 
+function is_super_admin(?array $admin = null): bool
+{
+    $admin = $admin ?? current_admin();
+    return ($admin['role'] ?? '') === 'super_admin';
+}
+
+function require_super_admin(): array
+{
+    $admin = require_admin();
+    if (!is_super_admin($admin)) {
+        flash('Super admin access is required.', 'warning');
+        redirect('/Handout%20Payment%20System/admin/dashboard.php');
+    }
+
+    return $admin;
+}
+
 function login_admin(string $email, string $password): bool
 {
     $stmt = db()->prepare('SELECT * FROM admins WHERE email = ? AND status = "active" LIMIT 1');

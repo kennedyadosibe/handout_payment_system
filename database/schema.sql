@@ -6,13 +6,57 @@ CREATE TABLE IF NOT EXISTS admins (
     name VARCHAR(120) NOT NULL,
     email VARCHAR(160) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(40) NOT NULL DEFAULT 'course_rep',
+    role ENUM('super_admin', 'course_rep') NOT NULL DEFAULT 'course_rep',
     status VARCHAR(20) NOT NULL DEFAULT 'active',
+    department_id INT NULL,
+    level_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS departments (
+    department_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(160) NOT NULL,
+    code VARCHAR(40) NOT NULL UNIQUE,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS academic_levels (
+    level_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(80) NOT NULL UNIQUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS courses (
+    course_id INT AUTO_INCREMENT PRIMARY KEY,
+    department_id INT NOT NULL,
+    level_id INT NOT NULL,
+    course_code VARCHAR(40) NOT NULL,
+    title VARCHAR(180) NOT NULL,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_course_scope (department_id, level_id, course_code),
+    CONSTRAINT fk_courses_department FOREIGN KEY (department_id) REFERENCES departments(department_id),
+    CONSTRAINT fk_courses_level FOREIGN KEY (level_id) REFERENCES academic_levels(level_id)
+);
+
+CREATE TABLE IF NOT EXISTS admin_course_assignments (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    course_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_admin_course (admin_id, course_id),
+    CONSTRAINT fk_assignments_admin FOREIGN KEY (admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE,
+    CONSTRAINT fk_assignments_course FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS handouts (
     handout_id INT AUTO_INCREMENT PRIMARY KEY,
+    department_id INT NULL,
+    level_id INT NULL,
+    course_id INT NULL,
     title VARCHAR(180) NOT NULL,
     course_code VARCHAR(40) NOT NULL,
     description TEXT NOT NULL,
@@ -21,6 +65,9 @@ CREATE TABLE IF NOT EXISTS handouts (
     created_by INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_handouts_department FOREIGN KEY (department_id) REFERENCES departments(department_id) ON DELETE SET NULL,
+    CONSTRAINT fk_handouts_level FOREIGN KEY (level_id) REFERENCES academic_levels(level_id) ON DELETE SET NULL,
+    CONSTRAINT fk_handouts_course FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE SET NULL,
     CONSTRAINT fk_handouts_admin FOREIGN KEY (created_by) REFERENCES admins(admin_id) ON DELETE SET NULL
 );
 

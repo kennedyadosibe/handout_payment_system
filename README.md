@@ -9,7 +9,7 @@ PHP/MySQL MVP for managing physical handout orders, test payments, and collectio
 3. Open `http://localhost/Handout%20Payment%20System/setup.php`.
 4. Open `http://localhost/Handout%20Payment%20System/`.
 
-Default admin account after setup:
+Default super admin account after setup:
 
 - Email: `course.rep@example.test`
 - Password: `change-me-course-rep`
@@ -21,6 +21,7 @@ Default admin account after setup:
 - Test payment screen that simulates gateway success or failure.
 - Receipt lookup by order reference.
 - Admin login, dashboard, handout management, order filters, and collection status updates.
+- Campus foundation tables for departments, levels, courses, super admin, and course representative assignments.
 
 ## Database
 
