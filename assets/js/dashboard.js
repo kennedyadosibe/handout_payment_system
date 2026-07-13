@@ -80,6 +80,45 @@
         }
     }
 
+    function filterRepCourseOptions() {
+        var departmentSelect = document.querySelector('#rep_department_id');
+        var levelSelect = document.querySelector('#rep_level_id');
+        var options = Array.from(document.querySelectorAll('[data-rep-course-option]'));
+        var message = document.querySelector('[data-rep-course-message]');
+
+        if (!departmentSelect || !levelSelect || !options.length) {
+            return;
+        }
+
+        var departmentId = departmentSelect.value;
+        var levelId = levelSelect.value;
+        var shouldFilter = departmentId !== '' && levelId !== '';
+        var visibleCount = 0;
+
+        options.forEach(function (option) {
+            var matches = !shouldFilter || (option.dataset.departmentId === departmentId && option.dataset.levelId === levelId);
+            option.hidden = !matches;
+            if (!matches) {
+                var checkbox = option.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = false;
+                }
+            } else {
+                visibleCount += 1;
+            }
+        });
+
+        if (message) {
+            if (!shouldFilter) {
+                message.textContent = 'Select a department and level to narrow the course list.';
+            } else if (visibleCount === 0) {
+                message.textContent = 'No courses exist for this department and level yet. Add a course first, then create the rep account.';
+            } else {
+                message.textContent = visibleCount + ' matching course' + (visibleCount === 1 ? '' : 's') + ' available.';
+            }
+        }
+    }
+
     document.querySelectorAll('[data-handout-search]').forEach(function (input) {
         var group = input.closest('.paid-group');
         if (!group) {
@@ -89,6 +128,13 @@
         input.addEventListener('input', function () {
             updateGroupSearch(group, input.value);
         });
+    });
+
+    ['#rep_department_id', '#rep_level_id'].forEach(function (selector) {
+        var select = document.querySelector(selector);
+        if (select) {
+            select.addEventListener('change', filterRepCourseOptions);
+        }
     });
 
     document.querySelectorAll('[data-dashboard-target]').forEach(function (button) {
@@ -121,4 +167,5 @@
     if (document.querySelector('[data-course-group]')) {
         filterPaidCourse(currentCourse, currentPanel === 'paid-students' || currentCourse !== 'all');
     }
+    filterRepCourseOptions();
 }());

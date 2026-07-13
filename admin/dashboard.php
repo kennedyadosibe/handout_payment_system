@@ -940,7 +940,7 @@ page_header('Admin Dashboard');
                                         <div class="form-label">Courses managed</div>
                                         <div class="course-assignment-list">
                                             <?php foreach ($courses as $course): ?>
-                                                <label class="course-assignment-option">
+                                                <label class="course-assignment-option" data-rep-course-option data-department-id="<?= (int) $course['department_id'] ?>" data-level-id="<?= (int) $course['level_id'] ?>">
                                                     <input class="form-check-input" type="checkbox" name="course_ids[]" value="<?= (int) $course['course_id'] ?>" <?= in_array((int) $course['course_id'], $editRepCourseIds, true) ? 'checked' : '' ?>>
                                                     <span>
                                                         <strong><?= h($course['course_code']) ?></strong>
@@ -950,6 +950,7 @@ page_header('Admin Dashboard');
                                                 </label>
                                             <?php endforeach; ?>
                                         </div>
+                                        <div class="form-text" data-rep-course-message></div>
                                         <?php if (!$courses): ?>
                                             <div class="alert alert-info mt-2 mb-0">Create at least one course before adding a course rep.</div>
                                         <?php endif; ?>
@@ -1252,5 +1253,5 @@ page_header('Admin Dashboard');
         </div>
     </div>
 </main>
-<script src="/Handout%20Payment%20System/assets/js/dashboard.js"></script>
+<script src="/Handout%20Payment%20System/assets/js/dashboard.js?v=20260713"></script>
 <?php page_footer(); ?>
