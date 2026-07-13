@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Super admins can now create the first campus structure from inside the dashboard. This panel starts with departments and academic levels, which courses and course representatives will depend on in the next steps.
+Super admins can now create the first campus structure from inside the dashboard. This panel starts with departments, academic levels, and courses, which course representatives will depend on in the next steps.
 
 ## How To Use
 
@@ -11,6 +11,7 @@ Super admins can now create the first campus structure from inside the dashboard
 3. Click `Campus setup` in the sidebar.
 4. Add a department with a name and short code.
 5. Add a level with a name and sort order.
+6. Add a course by selecting a department and level, then entering the course code and title.
 
 ## Files Changed
 
@@ -37,3 +38,4 @@ Run `setup.php` first if those tables do not exist locally.
 - Added a temporary department and level through the panel.
 - Confirmed both records appeared in the dashboard.
 - Removed the temporary test records from the database.
+- Added a temporary course through the panel, confirmed it appeared, and removed it from the database.

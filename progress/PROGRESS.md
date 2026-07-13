@@ -79,6 +79,7 @@
 - Added auth helper functions for super-admin checks.
 - Added a password show/hide toggle on the admin login form.
 - Added a super-admin Campus setup dashboard panel for departments and levels.
+- Added course creation and course listing to the Campus setup dashboard panel.
 
 ### Checks Performed
 
@@ -90,7 +91,8 @@
 - Ran PHP syntax checks for `admin/dashboard.php`.
 - Verified the Campus setup panel appears for a super admin.
 - Created and removed temporary department and level records through the Campus setup workflow.
+- Created and removed a temporary course through the Campus setup workflow.
 
 ### Next Steps
 
-- Add course creation to the Campus setup panel, then add course representative accounts and assignments.
+- Add course representative accounts and assign them to courses.

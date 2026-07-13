@@ -69,6 +69,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($dashboardBaseUrl . '?panel=campus-setup');
     }
 
+    if ($action === 'save_course') {
+        if (!is_super_admin($admin)) {
+            flash('Super admin access is required.', 'warning');
+            redirect($dashboardBaseUrl . '?panel=overview');
+        }
+
+        $departmentId = (int) ($_POST['department_id'] ?? 0);
+        $levelId = (int) ($_POST['level_id'] ?? 0);
+        $courseCode = strtoupper(trim($_POST['course_code'] ?? ''));
+        $courseTitle = trim($_POST['course_title'] ?? '');
+
+        if ($departmentId <= 0 || $levelId <= 0 || $courseCode === '' || $courseTitle === '') {
+            flash('Department, level, course code, and course title are required.', 'danger');
+            redirect($dashboardBaseUrl . '?panel=campus-setup');
+        }
+
+        try {
+            $stmt = $pdo->prepare('INSERT INTO courses (department_id, level_id, course_code, title) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$departmentId, $levelId, $courseCode, $courseTitle]);
+            flash('Course added.');
+        } catch (Throwable $exception) {
+            flash('Course could not be added. Check that it is not already created for that department and level.', 'danger');
+        }
+
+        redirect($dashboardBaseUrl . '?panel=campus-setup');
+    }
+
     if ($action === 'delete') {
         $stmt = $pdo->prepare('SELECT h.*, COUNT(o.order_id) AS order_count
             FROM handouts h
@@ -261,6 +288,11 @@ $incompleteOrders = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phon
     ORDER BY o.ordered_at DESC')->fetchAll();
 $departments = $pdo->query('SELECT * FROM departments ORDER BY name')->fetchAll();
 $levels = $pdo->query('SELECT * FROM academic_levels ORDER BY sort_order, name')->fetchAll();
+$courses = $pdo->query('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
+    FROM courses c
+    JOIN departments d ON d.department_id = c.department_id
+    JOIN academic_levels l ON l.level_id = c.level_id
+    ORDER BY d.name, l.sort_order, c.course_code')->fetchAll();
 $paidSql = 'SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
@@ -337,7 +369,7 @@ page_header('Admin Dashboard');
                 <div class="sidebar-label mt-4">Super admin</div>
                 <button class="dashboard-nav-item" type="button" data-dashboard-target="campus-setup">
                     <span>Campus setup</span>
-                    <strong><?= count($departments) + count($levels) ?></strong>
+                    <strong><?= count($departments) + count($levels) + count($courses) ?></strong>
                 </button>
             <?php endif; ?>
 
@@ -562,7 +594,7 @@ page_header('Admin Dashboard');
                                     <button class="btn btn-primary w-100" type="submit">Save department</button>
                                 </form>
 
-                                <form method="post" class="campus-form border rounded-2 p-3">
+                                <form method="post" class="campus-form border rounded-2 p-3 mb-4">
                                     <input type="hidden" name="action" value="save_level">
                                     <h3 class="h5 mb-3">Add level</h3>
                                     <div class="mb-3">
@@ -574,6 +606,40 @@ page_header('Admin Dashboard');
                                         <input class="form-control" id="sort_order" name="sort_order" type="number" value="0">
                                     </div>
                                     <button class="btn btn-primary w-100" type="submit">Save level</button>
+                                </form>
+
+                                <form method="post" class="campus-form border rounded-2 p-3">
+                                    <input type="hidden" name="action" value="save_course">
+                                    <h3 class="h5 mb-3">Add course</h3>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="department_id">Department</label>
+                                        <select class="form-select" id="department_id" name="department_id" required>
+                                            <option value="">Select department</option>
+                                            <?php foreach ($departments as $department): ?>
+                                                <option value="<?= (int) $department['department_id'] ?>"><?= h($department['name']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="level_id">Level</label>
+                                        <select class="form-select" id="level_id" name="level_id" required>
+                                            <option value="">Select level</option>
+                                            <?php foreach ($levels as $level): ?>
+                                                <option value="<?= (int) $level['level_id'] ?>"><?= h($level['name']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-5">
+                                            <label class="form-label" for="campus_course_code">Course code</label>
+                                            <input class="form-control" id="campus_course_code" name="course_code" placeholder="CS201" required>
+                                        </div>
+                                        <div class="col-md-7">
+                                            <label class="form-label" for="course_title">Course title</label>
+                                            <input class="form-control" id="course_title" name="course_title" placeholder="Data Structures" required>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary w-100 mt-3" type="submit">Save course</button>
                                 </form>
                             </div>
 
@@ -624,6 +690,34 @@ page_header('Admin Dashboard');
                                 </div>
                                 <?php if (!$levels): ?>
                                     <div class="alert alert-info mt-3">No levels have been created yet.</div>
+                                <?php endif; ?>
+
+                                <div class="table-responsive mt-4">
+                                    <table class="table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Department</th>
+                                                <th>Level</th>
+                                                <th>Code</th>
+                                                <th>Course</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($courses as $course): ?>
+                                                <tr>
+                                                    <td><?= h($course['department_name']) ?><br><span class="text-muted small"><?= h($course['department_code']) ?></span></td>
+                                                    <td><?= h($course['level_name']) ?></td>
+                                                    <td><?= h($course['course_code']) ?></td>
+                                                    <td><?= h($course['title']) ?></td>
+                                                    <td><?= status_badge($course['status']) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php if (!$courses): ?>
+                                    <div class="alert alert-info mt-3">No courses have been created yet.</div>
                                 <?php endif; ?>
                             </div>
                         </div>
