@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Handouts are now attached to official campus course records instead of relying on manually typed course codes. This makes each handout belong to a department, level, and course, which prepares the system for course representatives to manage only their assigned course handouts.
+Handouts are now attached to official campus course records instead of relying on manually typed course codes. This makes each handout belong to a department, level, and course, and makes course representatives responsible for publishing available handouts and setting prices for their assigned courses.
 
 ## How To Use
 
-1. Log in as an admin.
+1. Log in as a course representative.
 2. Open `Manage handouts`.
 3. Click `Add handout` or edit an existing handout.
 4. Select the official `Campus course`.
@@ -36,6 +36,8 @@ Existing order snapshots are not rewritten when a handout course changes. Paid a
 
 Course representatives only receive course options from `admin_course_assignments`. Their handout lists, paid lists, revenue cards, incomplete details, and collection actions are scoped to those assigned courses.
 
+Super admins manage campus setup and course representative accounts. They do not publish handouts or set handout prices.
+
 ## Official Documentation Checked
 
 - MySQL `JOIN` clause documentation: https://dev.mysql.com/doc/refman/8.4/en/join.html
@@ -49,4 +51,5 @@ Course representatives only receive course options from `admin_course_assignment
 - Remove the temporary handout after testing.
 - Create a temporary course representative assigned to one course.
 - Confirm the representative sees only that course in the handout editor.
+- Confirm super admins do not see the handout publishing tools and cannot open the older handout management pages directly.
 - Remove the temporary representative after testing.

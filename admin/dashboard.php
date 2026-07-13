@@ -186,6 +186,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Handout not found.', 'warning');
             redirect($returnUrl);
         }
+        if (is_super_admin($admin)) {
+            flash('Course representatives manage handout availability and prices.', 'warning');
+            redirect($returnUrl);
+        }
         if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $handout['course_id'])) {
             flash('You can only manage handouts for your assigned courses.', 'warning');
             redirect($returnUrl);
@@ -218,6 +222,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'save_handout') {
+        if (is_super_admin($admin)) {
+            flash('Course representatives are responsible for adding handouts and setting prices.', 'warning');
+            redirect($dashboardBaseUrl . '?panel=campus-setup');
+        }
+
         $title = trim($_POST['title'] ?? '');
         $courseId = (int) ($_POST['course_id'] ?? 0);
         $description = trim($_POST['description'] ?? '');
@@ -243,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare('SELECT * FROM handouts WHERE handout_id = ?');
             $stmt->execute([$handoutId]);
             $existingHandout = $stmt->fetch();
-            if (!$existingHandout || (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $existingHandout['course_id']))) {
+            if (!$existingHandout || !manageable_course_for_admin($admin, (int) $existingHandout['course_id'])) {
                 flash('You can only update handouts for your assigned courses.', 'warning');
                 redirect($dashboardBaseUrl . '?panel=manage-handouts');
             }
@@ -615,14 +624,16 @@ page_header('Admin Dashboard');
                 </button>
             <?php endif; ?>
 
-            <div class="sidebar-label mt-4">Admin links</div>
-            <button class="dashboard-nav-item" type="button" data-dashboard-target="manage-handouts">
-                <span>Manage handouts</span>
-                <strong><?= count($dashboardHandouts) ?></strong>
-            </button>
-            <button class="dashboard-nav-item" type="button" data-dashboard-target="edit-handout">
-                <span><?= $editHandoutId ? 'Edit handout' : 'Add handout' ?></span>
-            </button>
+            <div class="sidebar-label mt-4"><?= is_super_admin($admin) ? 'Oversight' : 'Course rep tools' ?></div>
+            <?php if (!is_super_admin($admin)): ?>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="manage-handouts">
+                    <span>Manage handouts</span>
+                    <strong><?= count($dashboardHandouts) ?></strong>
+                </button>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="edit-handout">
+                    <span><?= $editHandoutId ? 'Edit handout' : 'Add handout' ?></span>
+                </button>
+            <?php endif; ?>
             <button class="dashboard-nav-item" type="button" data-dashboard-target="view-orders">
                 <span>View orders</span>
                 <strong><?= count($dashboardOrders) ?></strong>
@@ -817,7 +828,7 @@ page_header('Admin Dashboard');
                     <div class="bg-white border rounded-2 p-4">
                         <div class="mb-4">
                             <h2 class="h4 mb-1">Campus setup</h2>
-                            <p class="text-muted mb-0">Create the departments, levels, courses, and course rep accounts that handouts will use.</p>
+                            <p class="text-muted mb-0">Create the campus structure and course rep accounts. Course reps publish available handouts and set prices.</p>
                         </div>
 
                         <div class="row g-4">
@@ -852,7 +863,7 @@ page_header('Admin Dashboard');
 
                                 <form method="post" class="campus-form border rounded-2 p-3">
                                     <input type="hidden" name="action" value="save_course">
-                                    <h3 class="h5 mb-3">Add course</h3>
+                                    <h3 class="h5 mb-3">Add official course</h3>
                                     <div class="mb-3">
                                         <label class="form-label" for="department_id">Department</label>
                                         <select class="form-select" id="department_id" name="department_id" required>
@@ -1078,6 +1089,7 @@ page_header('Admin Dashboard');
                 </section>
             <?php endif; ?>
 
+            <?php if (!is_super_admin($admin)): ?>
             <section class="dashboard-panel" id="dashboard-manage-handouts" data-dashboard-panel="manage-handouts" hidden>
                 <div class="bg-white border rounded-2 p-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
@@ -1189,6 +1201,7 @@ page_header('Admin Dashboard');
                     </div>
                 </form>
             </section>
+            <?php endif; ?>
 
             <section class="dashboard-panel" id="dashboard-view-orders" data-dashboard-panel="view-orders" hidden>
                 <div class="bg-white border rounded-2 p-4">

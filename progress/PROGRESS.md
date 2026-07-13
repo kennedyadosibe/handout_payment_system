@@ -85,6 +85,7 @@
 - Added student-side department, level, and course filtering for available handouts.
 - Added course representative account editing, password reset, assignment updates, and active/inactive status controls.
 - Added department/level filtering for course assignment options in the course representative form.
+- Restricted handout publishing, pricing, and handout management tools to course representatives.
 
 ### Checks Performed
 
@@ -103,6 +104,7 @@
 - Filtered the public handout list by Computer Science, Level 200, and H001, then confirmed the order page shows the campus course context.
 - Edited a temporary course representative from Campus setup, confirmed status and course assignment updates, and tested password reset behavior.
 - Confirmed the course representative form shows matching course options for Computer Science Level 200 and explains when no courses exist for another department/level.
+- Confirmed super admin no longer sees handout publishing tools and direct handout management pages redirect back to Campus setup.
 
 ### Next Steps
 

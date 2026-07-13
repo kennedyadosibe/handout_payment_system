@@ -4,6 +4,10 @@ require_once __DIR__ . '/../../app/bootstrap.php';
 require_once __DIR__ . '/../../app/layout.php';
 
 $admin = require_admin();
+if (is_super_admin($admin)) {
+    flash('Course representatives manage handout availability and prices.', 'warning');
+    redirect('/Handout%20Payment%20System/admin/dashboard.php?panel=campus-setup');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $handoutId = (int) ($_POST['handout_id'] ?? 0);
