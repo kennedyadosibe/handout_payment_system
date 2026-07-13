@@ -80,6 +80,7 @@
 - Added a password show/hide toggle on the admin login form.
 - Added a super-admin Campus setup dashboard panel for departments and levels.
 - Added course creation and course listing to the Campus setup dashboard panel.
+- Added course representative account creation and course assignment in Campus setup.
 
 ### Checks Performed
 
@@ -92,7 +93,8 @@
 - Verified the Campus setup panel appears for a super admin.
 - Created and removed temporary department and level records through the Campus setup workflow.
 - Created and removed a temporary course through the Campus setup workflow.
+- Created and removed a temporary course representative account with a course assignment through the Campus setup workflow.
 
 ### Next Steps
 
-- Add course representative accounts and assign them to courses.
+- Connect handout creation to campus courses so reps can manage the handouts assigned to their courses.

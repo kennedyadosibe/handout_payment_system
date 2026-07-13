@@ -313,6 +313,31 @@ body {
     border-color: rgba(23, 100, 216, .2) !important;
 }
 
+.course-assignment-list {
+    border: 1px solid rgba(23, 100, 216, .2);
+    border-radius: .45rem;
+    display: grid;
+    gap: .4rem;
+    max-height: 260px;
+    overflow: auto;
+    padding: .65rem;
+}
+
+.course-assignment-option {
+    align-items: flex-start;
+    background: rgba(255, 255, 255, .5);
+    border: 1px solid rgba(23, 100, 216, .12);
+    border-radius: .4rem;
+    display: flex;
+    gap: .55rem;
+    line-height: 1.25;
+    padding: .55rem;
+}
+
+.course-assignment-option small {
+    color: #667085;
+}
+
 .student-collected td:not(:last-child) {
     color: #667085;
     text-decoration-line: line-through;
