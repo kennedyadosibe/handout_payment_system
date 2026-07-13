@@ -7,7 +7,7 @@ $admin = require_admin();
 $pdo = db();
 
 $dashboardBaseUrl = '/Handout%20Payment%20System/admin/dashboard.php';
-$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'incomplete-details', 'manage-handouts', 'edit-handout', 'view-orders'];
+$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'incomplete-details', 'campus-setup', 'manage-handouts', 'edit-handout', 'view-orders'];
 $returnPanel = $_POST['return_panel'] ?? 'overview';
 if (!in_array($returnPanel, $allowedReturnPanels, true)) {
     $returnPanel = 'overview';
@@ -18,6 +18,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $orderId = (int) ($_POST['order_id'] ?? 0);
     $handoutId = (int) ($_POST['handout_id'] ?? 0);
+
+    if ($action === 'save_department') {
+        if (!is_super_admin($admin)) {
+            flash('Super admin access is required.', 'warning');
+            redirect($dashboardBaseUrl . '?panel=overview');
+        }
+
+        $departmentName = trim($_POST['department_name'] ?? '');
+        $departmentCode = strtoupper(trim($_POST['department_code'] ?? ''));
+
+        if ($departmentName === '' || $departmentCode === '') {
+            flash('Department name and code are required.', 'danger');
+            redirect($dashboardBaseUrl . '?panel=campus-setup');
+        }
+
+        try {
+            $stmt = $pdo->prepare('INSERT INTO departments (name, code) VALUES (?, ?)');
+            $stmt->execute([$departmentName, $departmentCode]);
+            flash('Department added.');
+        } catch (Throwable $exception) {
+            flash('Department could not be added. Check that the code is unique.', 'danger');
+        }
+
+        redirect($dashboardBaseUrl . '?panel=campus-setup');
+    }
+
+    if ($action === 'save_level') {
+        if (!is_super_admin($admin)) {
+            flash('Super admin access is required.', 'warning');
+            redirect($dashboardBaseUrl . '?panel=overview');
+        }
+
+        $levelName = trim($_POST['level_name'] ?? '');
+        $sortOrder = (int) ($_POST['sort_order'] ?? 0);
+
+        if ($levelName === '') {
+            flash('Level name is required.', 'danger');
+            redirect($dashboardBaseUrl . '?panel=campus-setup');
+        }
+
+        try {
+            $stmt = $pdo->prepare('INSERT INTO academic_levels (name, sort_order) VALUES (?, ?)');
+            $stmt->execute([$levelName, $sortOrder]);
+            flash('Level added.');
+        } catch (Throwable $exception) {
+            flash('Level could not be added. Check that the name is unique.', 'danger');
+        }
+
+        redirect($dashboardBaseUrl . '?panel=campus-setup');
+    }
 
     if ($action === 'delete') {
         $stmt = $pdo->prepare('SELECT h.*, COUNT(o.order_id) AS order_count
@@ -209,6 +259,8 @@ $incompleteOrders = $pdo->query('SELECT o.*, s.full_name, s.index_number, s.phon
     JOIN students s ON s.student_id = o.student_id
     WHERE o.payment_status = "not_paid"
     ORDER BY o.ordered_at DESC')->fetchAll();
+$departments = $pdo->query('SELECT * FROM departments ORDER BY name')->fetchAll();
+$levels = $pdo->query('SELECT * FROM academic_levels ORDER BY sort_order, name')->fetchAll();
 $paidSql = 'SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
     JOIN students s ON s.student_id = o.student_id
@@ -279,6 +331,14 @@ page_header('Admin Dashboard');
                         </button>
                     <?php endforeach; ?>
                 </div>
+            <?php endif; ?>
+
+            <?php if (is_super_admin($admin)): ?>
+                <div class="sidebar-label mt-4">Super admin</div>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="campus-setup">
+                    <span>Campus setup</span>
+                    <strong><?= count($departments) + count($levels) ?></strong>
+                </button>
             <?php endif; ?>
 
             <div class="sidebar-label mt-4">Admin links</div>
@@ -477,6 +537,99 @@ page_header('Admin Dashboard');
                     <?php endif; ?>
                 </div>
             </section>
+
+            <?php if (is_super_admin($admin)): ?>
+                <section class="dashboard-panel" id="dashboard-campus-setup" data-dashboard-panel="campus-setup" hidden>
+                    <div class="bg-white border rounded-2 p-4">
+                        <div class="mb-4">
+                            <h2 class="h4 mb-1">Campus setup</h2>
+                            <p class="text-muted mb-0">Create the departments and levels that courses, handouts, and course reps will use.</p>
+                        </div>
+
+                        <div class="row g-4">
+                            <div class="col-xl-5">
+                                <form method="post" class="campus-form border rounded-2 p-3 mb-4">
+                                    <input type="hidden" name="action" value="save_department">
+                                    <h3 class="h5 mb-3">Add department</h3>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="department_name">Department name</label>
+                                        <input class="form-control" id="department_name" name="department_name" placeholder="Computer Science" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="department_code">Code</label>
+                                        <input class="form-control" id="department_code" name="department_code" placeholder="CS" required>
+                                    </div>
+                                    <button class="btn btn-primary w-100" type="submit">Save department</button>
+                                </form>
+
+                                <form method="post" class="campus-form border rounded-2 p-3">
+                                    <input type="hidden" name="action" value="save_level">
+                                    <h3 class="h5 mb-3">Add level</h3>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="level_name">Level name</label>
+                                        <input class="form-control" id="level_name" name="level_name" placeholder="Level 200" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="sort_order">Sort order</label>
+                                        <input class="form-control" id="sort_order" name="sort_order" type="number" value="0">
+                                    </div>
+                                    <button class="btn btn-primary w-100" type="submit">Save level</button>
+                                </form>
+                            </div>
+
+                            <div class="col-xl-7">
+                                <div class="table-responsive mb-4">
+                                    <table class="table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Department</th>
+                                                <th>Code</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($departments as $department): ?>
+                                                <tr>
+                                                    <td><?= h($department['name']) ?></td>
+                                                    <td><?= h($department['code']) ?></td>
+                                                    <td><?= status_badge($department['status']) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php if (!$departments): ?>
+                                    <div class="alert alert-info">No departments have been created yet.</div>
+                                <?php endif; ?>
+
+                                <div class="table-responsive">
+                                    <table class="table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Level</th>
+                                                <th>Sort</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($levels as $level): ?>
+                                                <tr>
+                                                    <td><?= h($level['name']) ?></td>
+                                                    <td><?= (int) $level['sort_order'] ?></td>
+                                                    <td><?= status_badge($level['status']) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php if (!$levels): ?>
+                                    <div class="alert alert-info mt-3">No levels have been created yet.</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            <?php endif; ?>
 
             <section class="dashboard-panel" id="dashboard-manage-handouts" data-dashboard-panel="manage-handouts" hidden>
                 <div class="bg-white border rounded-2 p-4">
