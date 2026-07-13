@@ -102,17 +102,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect($dashboardBaseUrl . '?panel=overview');
         }
 
+        $repId = (int) ($_POST['rep_id'] ?? 0);
         $repName = trim($_POST['rep_name'] ?? '');
         $repEmail = strtolower(trim($_POST['rep_email'] ?? ''));
         $repPassword = $_POST['rep_password'] ?? '';
+        $repStatus = $_POST['rep_status'] ?? 'active';
         $departmentId = (int) ($_POST['rep_department_id'] ?? 0);
         $levelId = (int) ($_POST['rep_level_id'] ?? 0);
         $courseIds = array_values(array_unique(array_map('intval', $_POST['course_ids'] ?? [])));
         $courseIds = array_filter($courseIds, fn (int $courseId): bool => $courseId > 0);
 
-        if ($repName === '' || !filter_var($repEmail, FILTER_VALIDATE_EMAIL) || $repPassword === '' || $departmentId <= 0 || $levelId <= 0 || !$courseIds) {
-            flash('Rep name, valid email, password, department, level, and at least one course are required.', 'danger');
+        if ($repName === '' || !filter_var($repEmail, FILTER_VALIDATE_EMAIL) || ($repId <= 0 && $repPassword === '') || $departmentId <= 0 || $levelId <= 0 || !$courseIds || !in_array($repStatus, ['active', 'inactive'], true)) {
+            flash('Rep name, valid email, department, level, status, and at least one course are required. New reps also need a password.', 'danger');
             redirect($dashboardBaseUrl . '?panel=campus-setup');
+        }
+
+        if ($repId > 0) {
+            $stmt = $pdo->prepare('SELECT admin_id FROM admins WHERE admin_id = ? AND role = "course_rep"');
+            $stmt->execute([$repId]);
+            if (!$stmt->fetchColumn()) {
+                flash('Course representative account not found.', 'warning');
+                redirect($dashboardBaseUrl . '?panel=campus-setup');
+            }
         }
 
         $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
@@ -125,10 +136,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->beginTransaction();
         try {
-            $passwordHash = password_hash($repPassword, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role, status, department_id, level_id) VALUES (?, ?, ?, "course_rep", "active", ?, ?)');
-            $stmt->execute([$repName, $repEmail, $passwordHash, $departmentId, $levelId]);
-            $repId = (int) $pdo->lastInsertId();
+            if ($repId > 0) {
+                if ($repPassword !== '') {
+                    $passwordHash = password_hash($repPassword, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare('UPDATE admins SET name = ?, email = ?, password_hash = ?, status = ?, department_id = ?, level_id = ? WHERE admin_id = ? AND role = "course_rep"');
+                    $stmt->execute([$repName, $repEmail, $passwordHash, $repStatus, $departmentId, $levelId, $repId]);
+                } else {
+                    $stmt = $pdo->prepare('UPDATE admins SET name = ?, email = ?, status = ?, department_id = ?, level_id = ? WHERE admin_id = ? AND role = "course_rep"');
+                    $stmt->execute([$repName, $repEmail, $repStatus, $departmentId, $levelId, $repId]);
+                }
+
+                $stmt = $pdo->prepare('DELETE FROM admin_course_assignments WHERE admin_id = ?');
+                $stmt->execute([$repId]);
+            } else {
+                $passwordHash = password_hash($repPassword, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role, status, department_id, level_id) VALUES (?, ?, ?, "course_rep", ?, ?, ?)');
+                $stmt->execute([$repName, $repEmail, $passwordHash, $repStatus, $departmentId, $levelId]);
+                $repId = (int) $pdo->lastInsertId();
+            }
 
             $stmt = $pdo->prepare('INSERT INTO admin_course_assignments (admin_id, course_id) VALUES (?, ?)');
             foreach ($courseIds as $courseId) {
@@ -136,13 +161,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
-            $stmt->execute([$admin['admin_id'], 'create course representative account', 'admins', (string) $repId]);
+            $stmt->execute([$admin['admin_id'], $repId > 0 && (int) ($_POST['rep_id'] ?? 0) > 0 ? 'update course representative account' : 'create course representative account', 'admins', (string) $repId]);
 
             $pdo->commit();
-            flash('Course representative account created and assigned.');
+            flash($repId > 0 && (int) ($_POST['rep_id'] ?? 0) > 0 ? 'Course representative account updated.' : 'Course representative account created and assigned.');
         } catch (Throwable $exception) {
             $pdo->rollBack();
-            flash('Course representative could not be created. Check that the email is not already used.', 'danger');
+            flash('Course representative could not be saved. Check that the email is not already used.', 'danger');
         }
 
         redirect($dashboardBaseUrl . '?panel=campus-setup');
@@ -478,7 +503,23 @@ $courses = $pdo->query('SELECT c.*, d.name AS department_name, d.code AS departm
     JOIN departments d ON d.department_id = c.department_id
     JOIN academic_levels l ON l.level_id = c.level_id
     ORDER BY d.name, l.sort_order, c.course_code')->fetchAll();
-$courseReps = $pdo->query('SELECT a.admin_id, a.name, a.email, a.status, d.name AS department_name, l.name AS level_name,
+$editRepId = is_super_admin($admin) ? (int) ($_GET['rep_id'] ?? 0) : 0;
+$editRep = null;
+$editRepCourseIds = [];
+if ($editRepId > 0) {
+    $stmt = $pdo->prepare('SELECT * FROM admins WHERE admin_id = ? AND role = "course_rep"');
+    $stmt->execute([$editRepId]);
+    $editRep = $stmt->fetch();
+    if (!$editRep) {
+        flash('Course representative account not found.', 'warning');
+        redirect($dashboardBaseUrl . '?panel=campus-setup');
+    }
+
+    $stmt = $pdo->prepare('SELECT course_id FROM admin_course_assignments WHERE admin_id = ?');
+    $stmt->execute([$editRepId]);
+    $editRepCourseIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+$courseReps = $pdo->query('SELECT a.admin_id, a.name, a.email, a.status, a.department_id, a.level_id, d.name AS department_name, l.name AS level_name,
         COUNT(aca.course_id) AS course_count,
         GROUP_CONCAT(CONCAT(c.course_code, " - ", c.title) ORDER BY c.course_code SEPARATOR "||") AS assigned_courses
     FROM admins a
@@ -487,7 +528,7 @@ $courseReps = $pdo->query('SELECT a.admin_id, a.name, a.email, a.status, d.name 
     LEFT JOIN admin_course_assignments aca ON aca.admin_id = a.admin_id
     LEFT JOIN courses c ON c.course_id = aca.course_id
     WHERE a.role = "course_rep"
-    GROUP BY a.admin_id, a.name, a.email, a.status, d.name, l.name
+    GROUP BY a.admin_id, a.name, a.email, a.status, a.department_id, a.level_id, d.name, l.name
     ORDER BY a.name')->fetchAll();
 $paidSql = 'SELECT o.*, s.full_name, s.index_number, s.phone
     FROM orders o
@@ -843,20 +884,37 @@ page_header('Admin Dashboard');
                                     <button class="btn btn-primary w-100 mt-3" type="submit">Save course</button>
                                 </form>
 
-                                <form method="post" class="campus-form border rounded-2 p-3 mt-4">
+                                <form method="post" class="campus-form border rounded-2 p-3 mt-4" id="course-rep-form">
                                     <input type="hidden" name="action" value="save_course_rep">
-                                    <h3 class="h5 mb-3">Add course rep</h3>
+                                    <input type="hidden" name="rep_id" value="<?= (int) ($editRep['admin_id'] ?? 0) ?>">
+                                    <div class="d-flex justify-content-between gap-2 align-items-center mb-3">
+                                        <h3 class="h5 mb-0"><?= $editRep ? 'Edit course rep' : 'Add course rep' ?></h3>
+                                        <?php if ($editRep): ?>
+                                            <a class="btn btn-sm btn-outline-secondary" href="/Handout%20Payment%20System/admin/dashboard.php?panel=campus-setup">New rep</a>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="mb-3">
                                         <label class="form-label" for="rep_name">Rep name</label>
-                                        <input class="form-control" id="rep_name" name="rep_name" placeholder="Course Rep Name" required>
+                                        <input class="form-control" id="rep_name" name="rep_name" value="<?= h($editRep['name'] ?? '') ?>" placeholder="Course Rep Name" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label" for="rep_email">Email</label>
-                                        <input class="form-control" id="rep_email" name="rep_email" type="email" placeholder="rep@example.com" required>
+                                        <input class="form-control" id="rep_email" name="rep_email" type="email" value="<?= h($editRep['email'] ?? '') ?>" placeholder="rep@example.com" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label" for="rep_password">Temporary password</label>
-                                        <input class="form-control" id="rep_password" name="rep_password" type="password" required>
+                                        <label class="form-label" for="rep_password"><?= $editRep ? 'Reset password' : 'Temporary password' ?></label>
+                                        <input class="form-control" id="rep_password" name="rep_password" type="password" <?= $editRep ? '' : 'required' ?>>
+                                        <?php if ($editRep): ?>
+                                            <div class="form-text">Leave blank to keep the current password.</div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="rep_status">Status</label>
+                                        <select class="form-select" id="rep_status" name="rep_status" required>
+                                            <?php foreach (['active', 'inactive'] as $status): ?>
+                                                <option value="<?= h($status) ?>" <?= ($editRep['status'] ?? 'active') === $status ? 'selected' : '' ?>><?= h(ucfirst($status)) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-md-6">
@@ -864,7 +922,7 @@ page_header('Admin Dashboard');
                                             <select class="form-select" id="rep_department_id" name="rep_department_id" required>
                                                 <option value="">Select department</option>
                                                 <?php foreach ($departments as $department): ?>
-                                                    <option value="<?= (int) $department['department_id'] ?>"><?= h($department['name']) ?></option>
+                                                    <option value="<?= (int) $department['department_id'] ?>" <?= (int) ($editRep['department_id'] ?? 0) === (int) $department['department_id'] ? 'selected' : '' ?>><?= h($department['name']) ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
@@ -873,7 +931,7 @@ page_header('Admin Dashboard');
                                             <select class="form-select" id="rep_level_id" name="rep_level_id" required>
                                                 <option value="">Select level</option>
                                                 <?php foreach ($levels as $level): ?>
-                                                    <option value="<?= (int) $level['level_id'] ?>"><?= h($level['name']) ?></option>
+                                                    <option value="<?= (int) $level['level_id'] ?>" <?= (int) ($editRep['level_id'] ?? 0) === (int) $level['level_id'] ? 'selected' : '' ?>><?= h($level['name']) ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
@@ -883,7 +941,7 @@ page_header('Admin Dashboard');
                                         <div class="course-assignment-list">
                                             <?php foreach ($courses as $course): ?>
                                                 <label class="course-assignment-option">
-                                                    <input class="form-check-input" type="checkbox" name="course_ids[]" value="<?= (int) $course['course_id'] ?>">
+                                                    <input class="form-check-input" type="checkbox" name="course_ids[]" value="<?= (int) $course['course_id'] ?>" <?= in_array((int) $course['course_id'], $editRepCourseIds, true) ? 'checked' : '' ?>>
                                                     <span>
                                                         <strong><?= h($course['course_code']) ?></strong>
                                                         <?= h($course['title']) ?><br>
@@ -896,7 +954,7 @@ page_header('Admin Dashboard');
                                             <div class="alert alert-info mt-2 mb-0">Create at least one course before adding a course rep.</div>
                                         <?php endif; ?>
                                     </div>
-                                    <button class="btn btn-primary w-100 mt-3" type="submit">Save course rep</button>
+                                    <button class="btn btn-primary w-100 mt-3" type="submit"><?= $editRep ? 'Update course rep' : 'Save course rep' ?></button>
                                 </form>
                             </div>
 
@@ -985,6 +1043,7 @@ page_header('Admin Dashboard');
                                                 <th>Scope</th>
                                                 <th>Courses</th>
                                                 <th>Status</th>
+                                                <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1001,6 +1060,9 @@ page_header('Admin Dashboard');
                                                         <?php endif; ?>
                                                     </td>
                                                     <td><?= status_badge($rep['status']) ?></td>
+                                                    <td class="text-end">
+                                                        <a class="btn btn-sm btn-outline-primary" href="/Handout%20Payment%20System/admin/dashboard.php?panel=campus-setup&rep_id=<?= (int) $rep['admin_id'] ?>#course-rep-form">Edit</a>
+                                                    </td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>

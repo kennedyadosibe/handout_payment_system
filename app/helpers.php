@@ -45,6 +45,8 @@ function status_badge(string $status): string
         'successful' => 'success',
         'failed' => 'danger',
         'reversed' => 'dark',
+        'active' => 'success',
+        'inactive' => 'secondary',
     ];
     $class = $classes[$status] ?? 'secondary';
     return '<span class="badge bg-' . $class . '">' . h(str_replace('_', ' ', $status)) . '</span>';

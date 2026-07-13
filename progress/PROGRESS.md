@@ -83,6 +83,7 @@
 - Added course representative account creation and course assignment in Campus setup.
 - Connected handout creation and management to official campus course records.
 - Added student-side department, level, and course filtering for available handouts.
+- Added course representative account editing, password reset, assignment updates, and active/inactive status controls.
 
 ### Checks Performed
 
@@ -99,6 +100,7 @@
 - Created and removed a temporary handout tied to a selected campus course.
 - Created and removed a temporary course representative, then confirmed the handout editor only showed the assigned course.
 - Filtered the public handout list by Computer Science, Level 200, and H001, then confirmed the order page shows the campus course context.
+- Edited a temporary course representative from Campus setup, confirmed status and course assignment updates, and tested password reset behavior.
 
 ### Next Steps
 
