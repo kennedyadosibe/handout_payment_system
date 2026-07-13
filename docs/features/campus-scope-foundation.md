@@ -6,7 +6,8 @@ This is the first step toward making the system work for a whole campus instead 
 
 ## How It Works
 
-- `course.rep@example.test` is now seeded as the default `super_admin`.
+- `super.user@example.test` is seeded as the local `super_admin`.
+- `course.rep@example.test` is seeded as a local `course_rep`.
 - Departments are stored in `departments`.
 - Levels are stored in `academic_levels`.
 - Courses are stored in `courses`.
@@ -25,7 +26,7 @@ Existing handouts still work because the new campus scope fields are nullable. T
 
 ## Setup Notes
 
-Run `setup.php` after pulling this feature. It creates or upgrades the campus foundation tables and sets the default local admin account to `super_admin`.
+Run `setup.php` after pulling this feature. It creates or upgrades the campus foundation tables and sets the local super admin and course representative accounts.
 
 ## Official Documentation Checked
 
@@ -38,4 +39,5 @@ Run `setup.php` after pulling this feature. It creates or upgrades the campus fo
 - Ran `setup.php` locally.
 - Verified the new campus tables exist.
 - Verified `admins` and `handouts` have the new scope columns.
-- Verified `course.rep@example.test` is now a `super_admin`.
+- Verified `super.user@example.test` is a `super_admin`.
+- Verified `course.rep@example.test` is a `course_rep`.

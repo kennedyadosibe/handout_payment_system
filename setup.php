@@ -72,11 +72,6 @@ if (!column_exists($db, 'handouts', 'course_id')) {
     $db->exec('ALTER TABLE handouts ADD course_id INT NULL AFTER level_id');
 }
 
-$adminHash = password_hash('change-me-course-rep', PASSWORD_DEFAULT);
-$stmt = $db->prepare('INSERT IGNORE INTO admins (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)');
-$stmt->execute(['Super Admin', 'course.rep@example.test', $adminHash, 'super_admin', 'active']);
-$db->prepare('UPDATE admins SET role = "super_admin", name = ? WHERE email = ?')->execute(['Super Admin', 'course.rep@example.test']);
-
 $stmt = $db->prepare('INSERT INTO departments (name, code)
     SELECT ?, ?
     WHERE NOT EXISTS (SELECT 1 FROM departments WHERE code = ?)');
@@ -126,6 +121,25 @@ $stmt = $db->prepare('UPDATE handouts h
     WHERE h.department_id IS NULL AND h.level_id IS NULL AND h.course_id IS NULL');
 $stmt->execute();
 
+$superAdminHash = password_hash('change-me-super-admin', PASSWORD_DEFAULT);
+$stmt = $db->prepare('INSERT INTO admins (name, email, password_hash, role, status)
+    VALUES (?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), role = VALUES(role), status = VALUES(status), department_id = NULL, level_id = NULL');
+$stmt->execute(['Super Admin', 'super.user@example.test', $superAdminHash, 'super_admin', 'active']);
+
+$courseRepHash = password_hash('change-me-course-rep', PASSWORD_DEFAULT);
+$stmt = $db->prepare('INSERT INTO admins (name, email, password_hash, role, status, department_id, level_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), role = VALUES(role), status = VALUES(status), department_id = VALUES(department_id), level_id = VALUES(level_id)');
+$stmt->execute(['Course Representative', 'course.rep@example.test', $courseRepHash, 'course_rep', 'active', $departmentId, $levelId]);
+
+$courseRepId = (int) $db->query("SELECT admin_id FROM admins WHERE email = 'course.rep@example.test' LIMIT 1")->fetchColumn();
+$stmt = $db->prepare('DELETE FROM admin_course_assignments WHERE admin_id = ?');
+$stmt->execute([$courseRepId]);
+$stmt = $db->prepare('INSERT INTO admin_course_assignments (admin_id, course_id)
+    SELECT ?, course_id FROM courses WHERE department_id = ? AND level_id = ?');
+$stmt->execute([$courseRepId, $departmentId, $levelId]);
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -139,10 +153,10 @@ $stmt->execute();
 <main class="container py-5">
     <div class="setup-card bg-white border rounded-3 p-4 mx-auto" style="max-width: 720px;">
         <h1 class="h3">Setup complete</h1>
-        <p class="text-muted">The database, campus foundation, sample handouts and default super admin user are ready.</p>
+        <p class="text-muted">The database, campus foundation, sample handouts and local admin accounts are ready.</p>
         <div class="alert alert-info">
-            <strong>Admin email:</strong> course.rep@example.test<br>
-            <strong>Password:</strong> change-me-course-rep
+            <strong>Super admin:</strong> super.user@example.test / change-me-super-admin<br>
+            <strong>Course rep:</strong> course.rep@example.test / change-me-course-rep
         </div>
         <a class="btn btn-primary" href="/Handout%20Payment%20System/">Open Website</a>
         <a class="btn btn-outline-primary" href="/Handout%20Payment%20System/admin/login.php">Admin Login</a>

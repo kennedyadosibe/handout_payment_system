@@ -75,7 +75,7 @@
 ### Completed
 
 - Added the campus scope database foundation for departments, academic levels, courses, and course representative assignments.
-- Changed the default local admin account to a `super_admin`.
+- Set `super.user@example.test` as the local `super_admin` and `course.rep@example.test` as the local `course_rep`.
 - Added auth helper functions for super-admin checks.
 - Added a password show/hide toggle on the admin login form.
 - Added a super-admin Campus setup dashboard panel for departments and levels.
@@ -91,7 +91,8 @@
 
 - Ran PHP syntax checks for `setup.php`, `app/auth.php`, and `admin/login.php`.
 - Ran `setup.php` locally and verified the new campus tables and scope columns were created.
-- Confirmed `course.rep@example.test` is seeded as `super_admin`.
+- Confirmed `super.user@example.test` logs in as `super_admin`.
+- Confirmed `course.rep@example.test` logs in as `course_rep`.
 - Ran PHP syntax checks for `admin/login.php`.
 - Verified the password toggle changes the field between hidden and visible states.
 - Ran PHP syntax checks for `admin/dashboard.php`.
