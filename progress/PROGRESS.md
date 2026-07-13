@@ -82,6 +82,7 @@
 - Added course creation and course listing to the Campus setup dashboard panel.
 - Added course representative account creation and course assignment in Campus setup.
 - Connected handout creation and management to official campus course records.
+- Added student-side department, level, and course filtering for available handouts.
 
 ### Checks Performed
 
@@ -97,7 +98,8 @@
 - Created and removed a temporary course representative account with a course assignment through the Campus setup workflow.
 - Created and removed a temporary handout tied to a selected campus course.
 - Created and removed a temporary course representative, then confirmed the handout editor only showed the assigned course.
+- Filtered the public handout list by Computer Science, Level 200, and H001, then confirmed the order page shows the campus course context.
 
 ### Next Steps
 
-- Add student-side filtering by department, level, and course so students see only the handouts for their class.
+- Add dynamic dependent filtering so course choices narrow automatically after a student selects department and level.

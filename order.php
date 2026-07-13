@@ -4,7 +4,12 @@ require_once __DIR__ . '/app/bootstrap.php';
 require_once __DIR__ . '/app/layout.php';
 
 $handoutId = (int) ($_GET['handout_id'] ?? $_POST['handout_id'] ?? 0);
-$stmt = db()->prepare('SELECT * FROM handouts WHERE handout_id = ? AND status = "available"');
+$stmt = db()->prepare('SELECT h.*, c.title AS campus_course_title, d.name AS department_name, l.name AS level_name
+    FROM handouts h
+    LEFT JOIN courses c ON c.course_id = h.course_id
+    LEFT JOIN departments d ON d.department_id = h.department_id
+    LEFT JOIN academic_levels l ON l.level_id = h.level_id
+    WHERE h.handout_id = ? AND h.status = "available"');
 $stmt->execute([$handoutId]);
 $handout = $stmt->fetch();
 
@@ -78,6 +83,12 @@ page_header('Order Handout', 'handouts');
             <div class="bg-white p-4 rounded-2 border">
                 <span class="badge text-bg-secondary"><?= h($handout['course_code']) ?></span>
                 <h1 class="h3 mt-3"><?= h($handout['title']) ?></h1>
+                <div class="text-muted small mb-2">
+                    <?= h($handout['department_name'] ?? 'Department not set') ?> · <?= h($handout['level_name'] ?? 'Level not set') ?>
+                    <?php if (!empty($handout['campus_course_title'])): ?>
+                        <br><?= h($handout['campus_course_title']) ?>
+                    <?php endif; ?>
+                </div>
                 <p class="text-muted"><?= h($handout['description']) ?></p>
                 <div class="price-pill d-inline-block"><?= money($handout['current_price']) ?></div>
                 <p class="small text-muted mt-3 mb-0">The price is loaded from the handout record and saved on your order as a price snapshot.</p>

@@ -7,7 +7,14 @@ $pdo = db();
 $totalHandouts = (int) $pdo->query('SELECT COUNT(*) FROM handouts')->fetchColumn();
 $availableHandouts = (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn();
 $paidOrders = (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn();
-$stmt = $pdo->query('SELECT * FROM handouts WHERE status = "available" ORDER BY created_at DESC LIMIT 3');
+$stmt = $pdo->query('SELECT h.*, c.title AS campus_course_title, d.name AS department_name, l.name AS level_name
+    FROM handouts h
+    LEFT JOIN courses c ON c.course_id = h.course_id
+    LEFT JOIN departments d ON d.department_id = h.department_id
+    LEFT JOIN academic_levels l ON l.level_id = h.level_id
+    WHERE h.status = "available"
+    ORDER BY h.created_at DESC
+    LIMIT 3');
 $featured = $stmt->fetchAll();
 
 page_header('Home', 'home');
@@ -60,6 +67,12 @@ page_header('Home', 'home');
                             <span class="price-pill"><?= money($handout['current_price']) ?></span>
                         </div>
                         <h3 class="h5 mt-3"><?= h($handout['title']) ?></h3>
+                        <div class="text-muted small mb-2">
+                            <?= h($handout['department_name'] ?? 'Department not set') ?> · <?= h($handout['level_name'] ?? 'Level not set') ?>
+                            <?php if (!empty($handout['campus_course_title'])): ?>
+                                <br><?= h($handout['campus_course_title']) ?>
+                            <?php endif; ?>
+                        </div>
                         <p class="text-muted"><?= h($handout['description']) ?></p>
                         <a class="btn btn-primary w-100" href="/Handout%20Payment%20System/order.php?handout_id=<?= (int) $handout['handout_id'] ?>">Order</a>
                     </div>
