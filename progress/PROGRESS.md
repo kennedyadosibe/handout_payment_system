@@ -92,6 +92,7 @@
 - Added setup cleanup for unused non-standard level records from older local setup runs.
 - Made paid order lists read-only for super admins while keeping order updates and deletes available to course reps.
 - Added super admin revenue filters for department, level, and course with a filtered total.
+- Changed super admin revenue so a specific course must be selected before revenue totals are shown.
 
 ### Checks Performed
 
@@ -118,6 +119,7 @@
 - Ran PHP syntax checks for `setup.php` after adding fixed-level cleanup.
 - Ran PHP syntax checks for `admin/dashboard.php` and `admin/orders/index.php` after making super admin order views read-only.
 - Ran PHP syntax checks for `admin/dashboard.php` after adding super admin revenue filters.
+- Ran PHP syntax checks for `admin/dashboard.php` after requiring course-level revenue lookup.
 
 ### Next Steps
 

@@ -479,8 +479,9 @@ $revenueCourseFilters = [
     'level_id' => (int) ($_GET['revenue_level_id'] ?? 0),
     'course_id' => (int) ($_GET['revenue_course_id'] ?? 0),
 ];
+$hasRevenueCourseFilter = $revenueCourseFilters['course_id'] > 0;
 $revenueByCourseTotal = 0.0;
-if (is_super_admin($admin)) {
+if (is_super_admin($admin) && $hasRevenueCourseFilter) {
     $revenueByCourseSql = 'SELECT
             COALESCE(d.name, "Unassigned department") AS department_name,
             COALESCE(l.name, "Unassigned class") AS level_name,
@@ -494,8 +495,8 @@ if (is_super_admin($admin)) {
         LEFT JOIN courses c ON c.course_id = h.course_id
         LEFT JOIN departments d ON d.department_id = h.department_id
         LEFT JOIN academic_levels l ON l.level_id = h.level_id
-        WHERE o.payment_status = "paid"';
-    $revenueByCourseParams = [];
+        WHERE o.payment_status = "paid" AND h.course_id = ?';
+    $revenueByCourseParams = [$revenueCourseFilters['course_id']];
     if ($revenueCourseFilters['department_id'] > 0) {
         $revenueByCourseSql .= ' AND h.department_id = ?';
         $revenueByCourseParams[] = $revenueCourseFilters['department_id'];
@@ -503,10 +504,6 @@ if (is_super_admin($admin)) {
     if ($revenueCourseFilters['level_id'] > 0) {
         $revenueByCourseSql .= ' AND h.level_id = ?';
         $revenueByCourseParams[] = $revenueCourseFilters['level_id'];
-    }
-    if ($revenueCourseFilters['course_id'] > 0) {
-        $revenueByCourseSql .= ' AND h.course_id = ?';
-        $revenueByCourseParams[] = $revenueCourseFilters['course_id'];
     }
     $revenueByCourseSql .= ' GROUP BY d.name, l.name, c.course_code, c.title, o.course_code_snapshot
         ORDER BY d.name, l.name, c.course_code, o.course_code_snapshot';
@@ -729,7 +726,7 @@ page_header('Admin Dashboard');
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                         <div>
                             <h2 class="h4 mb-1"><?= is_super_admin($admin) ? 'Revenue by course' : 'Revenue by handout' ?></h2>
-                            <p class="text-muted mb-0"><?= is_super_admin($admin) ? 'Verify totals by department, class, and course.' : 'Each handout keeps its own revenue total.' ?></p>
+                            <p class="text-muted mb-0"><?= is_super_admin($admin) ? 'Select a course to verify its paid revenue.' : 'Each handout keeps its own revenue total.' ?></p>
                         </div>
                         <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="view-orders">Open paid list</button>
                     </div>
@@ -762,56 +759,60 @@ page_header('Admin Dashboard');
                                 <div class="col-md-4">
                                     <label class="form-label" for="revenue_course_id">Course</label>
                                     <select class="form-select" id="revenue_course_id" name="revenue_course_id" data-revenue-course>
-                                        <option value="0">All courses</option>
+                                        <option value="0">Select a course</option>
                                         <?php foreach ($courses as $course): ?>
                                             <option value="<?= (int) $course['course_id'] ?>" data-department-id="<?= (int) $course['department_id'] ?>" data-level-id="<?= (int) $course['level_id'] ?>" <?= $revenueCourseFilters['course_id'] === (int) $course['course_id'] ? 'selected' : '' ?>>
-                                                <?= h($course['department_code'] . ' · ' . $course['level_name'] . ' · ' . $course['course_code'] . ' - ' . $course['title']) ?>
+                                                <?= h($course['department_code'] . ' | ' . $course['level_name'] . ' | ' . $course['course_code'] . ' - ' . $course['title']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="col-md-2">
-                                    <button class="btn btn-primary w-100" type="submit">Filter</button>
+                                    <button class="btn btn-primary w-100" type="submit">Check</button>
                                 </div>
                             </div>
                             <?php if ($revenueCourseFilters['department_id'] > 0 || $revenueCourseFilters['level_id'] > 0 || $revenueCourseFilters['course_id'] > 0): ?>
                                 <a class="btn btn-sm btn-outline-secondary mt-3" href="/Handout%20Payment%20System/admin/dashboard.php?panel=revenue">Clear filters</a>
                             <?php endif; ?>
                         </form>
-                        <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
-                            <div class="text-muted small">
-                                Showing <?= count($revenueByCourse) ?> course revenue row<?= count($revenueByCourse) === 1 ? '' : 's' ?>.
+                        <?php if ($hasRevenueCourseFilter): ?>
+                            <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                                <div class="text-muted small">
+                                    Showing <?= count($revenueByCourse) ?> revenue row<?= count($revenueByCourse) === 1 ? '' : 's' ?> for the selected course.
+                                </div>
+                                <div class="fw-bold">Course total: <?= money($revenueByCourseTotal) ?></div>
                             </div>
-                            <div class="fw-bold">Filtered total: <?= money($revenueByCourseTotal) ?></div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Department</th>
-                                        <th>Class</th>
-                                        <th>Course</th>
-                                        <th>Handouts</th>
-                                        <th>Paid students</th>
-                                        <th>Revenue</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($revenueByCourse as $revenue): ?>
+                            <div class="table-responsive">
+                                <table class="table align-middle mb-0">
+                                    <thead>
                                         <tr>
-                                            <td><?= h($revenue['department_name']) ?></td>
-                                            <td><?= h($revenue['level_name']) ?></td>
-                                            <td><?= h($revenue['course_code']) ?><br><span class="text-muted small"><?= h($revenue['course_title']) ?></span></td>
-                                            <td><?= (int) $revenue['handout_count'] ?></td>
-                                            <td><?= (int) $revenue['paid_count'] ?></td>
-                                            <td class="fw-bold"><?= money($revenue['total_revenue']) ?></td>
+                                            <th>Department</th>
+                                            <th>Class</th>
+                                            <th>Course</th>
+                                            <th>Handouts</th>
+                                            <th>Paid students</th>
+                                            <th>Revenue</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <?php if (!$revenueByCourse): ?>
-                            <div class="alert alert-info mb-0">No paid revenue has been recorded yet.</div>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($revenueByCourse as $revenue): ?>
+                                            <tr>
+                                                <td><?= h($revenue['department_name']) ?></td>
+                                                <td><?= h($revenue['level_name']) ?></td>
+                                                <td><?= h($revenue['course_code']) ?><br><span class="text-muted small"><?= h($revenue['course_title']) ?></span></td>
+                                                <td><?= (int) $revenue['handout_count'] ?></td>
+                                                <td><?= (int) $revenue['paid_count'] ?></td>
+                                                <td class="fw-bold"><?= money($revenue['total_revenue']) ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <?php if (!$revenueByCourse): ?>
+                                <div class="alert alert-info mb-0">No paid revenue has been recorded for this course yet.</div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div class="alert alert-info mb-0">Select a course to view its revenue.</div>
                         <?php endif; ?>
                     <?php else: ?>
                         <div class="row g-3">
@@ -1181,7 +1182,7 @@ page_header('Admin Dashboard');
                         </div>
                         <?php if ($currentRepScope): ?>
                             <span class="badge text-bg-secondary align-self-md-start">
-                                <?= h(($currentRepScope['department_code'] ?? 'Department') . ' · ' . ($currentRepScope['level_name'] ?? 'Class')) ?>
+                                <?= h(($currentRepScope['department_code'] ?? 'Department') . ' | ' . ($currentRepScope['level_name'] ?? 'Class')) ?>
                             </span>
                         <?php endif; ?>
                     </div>
@@ -1262,7 +1263,7 @@ page_header('Admin Dashboard');
                                             <span class="text-muted small">
                                                 <?= h($handout['campus_course_title'] ?? 'No campus course') ?>
                                                 <?php if (!empty($handout['department_code']) || !empty($handout['level_name'])): ?>
-                                                    · <?= h(trim(($handout['department_code'] ?? '') . ' ' . ($handout['level_name'] ?? ''))) ?>
+                                                    | <?= h(trim(($handout['department_code'] ?? '') . ' ' . ($handout['level_name'] ?? ''))) ?>
                                                 <?php endif; ?>
                                             </span>
                                         </td>
