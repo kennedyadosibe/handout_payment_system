@@ -87,12 +87,26 @@ if ($noCoursesForSelectedScope) {
 page_header('Available Handouts', 'handouts');
 ?>
 <main class="container py-5">
-    <div class="mb-4">
-        <h1 class="h2">Available handouts</h1>
-        <p class="text-muted">Select your department and level first so the system only shows handouts for your class.</p>
+    <div class="handouts-header mb-4">
+        <div>
+            <span class="handouts-eyebrow">Class handout finder</span>
+            <h1 class="h2 mb-2">Available handouts</h1>
+            <p class="mb-0">Select your department and level first so the system only shows handouts for your class.</p>
+        </div>
+        <div class="handouts-header-stat">
+            <span><?= count($handouts) ?></span>
+            <small><?= count($handouts) === 1 ? 'matching handout' : 'matching handouts' ?></small>
+        </div>
     </div>
 
-    <form class="bg-white border rounded-2 p-4 mb-4" method="get" data-handout-filter-form>
+    <form class="handout-filter-panel mb-4" method="get" data-handout-filter-form>
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+            <div>
+                <h2 class="h5 mb-1">Filter by class</h2>
+                <p class="text-muted mb-0">Choose your class details before selecting a course.</p>
+            </div>
+            <a class="btn btn-outline-primary btn-sm" href="/Handout%20Payment%20System/">Back home</a>
+        </div>
         <div class="row g-3 align-items-end">
             <div class="col-md-4">
                 <label class="form-label" for="department_id">Department</label>
@@ -130,22 +144,22 @@ page_header('Available Handouts', 'handouts');
             </div>
             <div class="col-md-2 d-grid gap-2">
                 <button class="btn btn-primary" type="submit">Filter</button>
-                <a class="btn btn-outline-secondary" href="/Handout%20Payment%20System/handouts.php">Clear</a>
+                <a class="btn btn-outline-primary" href="/Handout%20Payment%20System/handouts.php">Clear</a>
             </div>
         </div>
     </form>
 
-    <div class="row g-4">
+    <div class="row g-4 handout-results">
         <?php foreach ($handouts as $handout): ?>
             <div class="col-md-6 col-xl-4">
                 <div class="card handout-card border-0">
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between gap-2">
-                            <span class="badge text-bg-secondary"><?= h($handout['course_code']) ?></span>
+                            <span class="handout-course-code"><?= h($handout['course_code']) ?></span>
                             <span class="price-pill"><?= money($handout['current_price']) ?></span>
                         </div>
                         <h2 class="h5 mt-3"><?= h($handout['title']) ?></h2>
-                        <div class="text-muted small mb-2">
+                        <div class="handout-meta small mb-2">
                             <?= h($handout['department_name'] ?? 'Department not set') ?> | <?= h($handout['level_name'] ?? 'Level not set') ?>
                             <?php if (!empty($handout['campus_course_title'])): ?>
                                 <br><?= h($handout['campus_course_title']) ?>
@@ -159,7 +173,13 @@ page_header('Available Handouts', 'handouts');
         <?php endforeach; ?>
     </div>
     <?php if (!$handouts): ?>
-        <div class="alert alert-info"><?= h($emptyMessage) ?></div>
+        <div class="handout-empty-state">
+            <div class="handout-empty-mark">?</div>
+            <div>
+                <h2 class="h5">No class handouts loaded</h2>
+                <p class="mb-0"><?= h($emptyMessage) ?></p>
+            </div>
+        </div>
     <?php endif; ?>
 </main>
 <script src="/Handout%20Payment%20System/assets/js/handouts.js?v=20260714"></script>

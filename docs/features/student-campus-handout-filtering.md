@@ -12,7 +12,7 @@ Students can filter available handouts by department, level, and course before o
 4. Review the matching handouts and click `Order handout`.
 5. Confirm the department, level, and course on the order page before entering student details.
 
-The homepage now starts students with a department and level finder instead of previewing recent handouts from across campus. It also uses styled blue step cards to explain the student flow: choose class, order handout, then pay and collect. Before a student filters the handout page, the public handout list shows an instruction to select a department and level instead of showing campus-wide courses or handouts. When a department or level is selected, the page only shows handouts inside that selected scope. If no courses exist for that class yet, the page says no courses are currently available and shows no handouts from other departments or levels. If courses exist but no handouts have been published, it shows a handout-specific empty-state message.
+The homepage now starts students with a department and level finder instead of previewing recent handouts from across campus. It also uses styled blue step cards to explain the student flow: choose class, order handout, then pay and collect. Before a student filters the handout page, the public handout list shows an instruction to select a department and level instead of showing campus-wide courses or handouts. The handout page uses a blue header, styled filter panel, blue result cards, and a guided empty state so the student flow feels consistent with the homepage. When a department or level is selected, the page only shows handouts inside that selected scope. If no courses exist for that class yet, the page says no courses are currently available and shows no handouts from other departments or levels. If courses exist but no handouts have been published, it shows a handout-specific empty-state message.
 
 ## Files Changed
 
@@ -40,6 +40,7 @@ The course dropdown is narrowed in PHP and in the browser after a department or 
 - Run JavaScript syntax checks for `assets/js/handouts.js`.
 - Open the handout listing and confirm department, level, and course controls appear.
 - Open the default handout listing and confirm it shows filtering instructions instead of handout cards or all-course options.
+- Confirm the handout page uses the styled blue header, filter panel, result cards, and empty state.
 - Open the homepage and confirm it shows the department/level finder instead of featured handout cards.
 - Confirm the homepage student-flow cards use the styled blue card design.
 - Submit the homepage finder and confirm it opens the filtered handout page for that class.
