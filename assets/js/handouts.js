@@ -11,6 +11,7 @@
 
         var departmentId = departmentSelect.value;
         var levelId = levelSelect.value;
+        var scopeFiltered = courseSelect.dataset.scopeFiltered === '1';
         var visibleCount = 0;
         var selectedStillVisible = courseSelect.value === '';
 
@@ -37,11 +38,13 @@
         if (!selectedStillVisible) {
             courseSelect.value = '';
         }
-        courseSelect.disabled = (departmentId !== '' || levelId !== '') && visibleCount === 0;
+        courseSelect.disabled = (departmentId === '' && levelId === '') || ((departmentId !== '' || levelId !== '') && visibleCount === 0);
 
         if (message) {
             if (departmentId === '' && levelId === '') {
-                message.textContent = 'Select a department and level to narrow courses.';
+                message.textContent = 'Select a department and level, then click Filter to load courses.';
+            } else if (visibleCount === 0 && !scopeFiltered) {
+                message.textContent = 'Click Filter to load courses for the selected class.';
             } else if (visibleCount === 0) {
                 message.textContent = 'No courses exist for the selected department and level yet.';
             } else {

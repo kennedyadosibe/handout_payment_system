@@ -12,7 +12,7 @@ Students can filter available handouts by department, level, and course before o
 4. Review the matching handouts and click `Order handout`.
 5. Confirm the department, level, and course on the order page before entering student details.
 
-When a department or level is selected, the page only shows handouts inside that selected scope. If no courses exist for that class yet, the page says no courses are currently available and shows no handouts from other departments or levels. If courses exist but no handouts have been published, it shows a handout-specific empty-state message.
+Before a student filters the page, the public handout list shows an instruction to select a department and level instead of showing campus-wide courses or handouts. When a department or level is selected, the page only shows handouts inside that selected scope. If no courses exist for that class yet, the page says no courses are currently available and shows no handouts from other departments or levels. If courses exist but no handouts have been published, it shows a handout-specific empty-state message.
 
 ## Files Changed
 
@@ -23,9 +23,9 @@ When a department or level is selected, the page only shows handouts inside that
 
 ## Database Notes
 
-The filter uses the existing `handouts.department_id`, `handouts.level_id`, and `handouts.course_id` values. Handouts without campus links can still appear when no filter is selected, but they will not appear under a specific department, level, or course filter.
+The filter uses the existing `handouts.department_id`, `handouts.level_id`, and `handouts.course_id` values. The handout query only loads results after a student chooses a department, level, or course filter, so handouts from other classes are not exposed on the default page.
 
-The course dropdown is narrowed in PHP and in the browser after a department or level is selected. Courses from other departments or levels are not shown for the selected class. If no courses exist, the course dropdown is disabled and displays that no courses are available.
+The course dropdown is narrowed in PHP and in the browser after a department or level is selected. Courses from other departments or levels are not shown for the selected class. Before filtering, the course dropdown is disabled and tells the student to select a department and level first. If no courses exist, the course dropdown is disabled and displays that no courses are available.
 
 ## Official Documentation Checked
 
@@ -37,6 +37,7 @@ The course dropdown is narrowed in PHP and in the browser after a department or 
 - Run PHP syntax checks for `handouts.php`, `index.php`, and `order.php`.
 - Run JavaScript syntax checks for `assets/js/handouts.js`.
 - Open the handout listing and confirm department, level, and course controls appear.
+- Open the default handout listing and confirm it shows filtering instructions instead of handout cards or all-course options.
 - Filter by Computer Science, Level 200, and H001.
 - Confirm the visible handouts match the selected course.
 - Filter by a department/level combination that has no handouts and confirm no other handouts appear.

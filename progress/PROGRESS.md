@@ -100,6 +100,7 @@
 - Tightened public handout filtering so selected department/level scopes never fall back to showing other class handouts.
 - Tightened the public course dropdown so selected department/level scopes do not show courses from other classes.
 - Updated the public handout empty state so a class with no courses says no courses are currently available.
+- Changed the default public handout page to show filter instructions instead of listing all campus courses or handouts before a student selects a class.
 
 ### Checks Performed
 
@@ -134,6 +135,7 @@
 - Ran PHP syntax checks for `handouts.php` and JavaScript syntax checks for `assets/js/handouts.js` after tightening public class filtering.
 - Browser-tested an empty department/level and confirmed the course dropdown does not show unrelated courses.
 - Browser-tested an empty department/level and confirmed the main page says no courses are currently available.
+- Confirmed the default handout page shows filter instructions before loading class-specific handouts.
 
 ### Next Steps
 

@@ -36,7 +36,9 @@ $courseOptions = array_values(array_filter($courses, function (array $course) us
     $matchesLevel = $selectedLevelId <= 0 || (int) $course['level_id'] === $selectedLevelId;
     return $matchesDepartment && $matchesLevel;
 }));
+$visibleCourseOptions = $hasClassFilter ? $courseOptions : [];
 $noCoursesForSelectedScope = ($selectedDepartmentId > 0 || $selectedLevelId > 0) && !$courseOptions;
+$courseSelectDisabled = !$hasClassFilter || !$visibleCourseOptions;
 $selectedCourseIsAvailable = $selectedCourseId <= 0;
 foreach ($courseOptions as $course) {
     if ((int) $course['course_id'] === $selectedCourseId) {
@@ -48,32 +50,35 @@ if (!$selectedCourseIsAvailable) {
     $selectedCourseId = 0;
 }
 
-$sql = 'SELECT h.*, c.title AS campus_course_title, d.name AS department_name, d.code AS department_code, l.name AS level_name
-    FROM handouts h
-    LEFT JOIN courses c ON c.course_id = h.course_id
-    LEFT JOIN departments d ON d.department_id = h.department_id
-    LEFT JOIN academic_levels l ON l.level_id = h.level_id
-    WHERE h.status = "available"';
-$params = [];
+$handouts = [];
+if ($hasClassFilter && !$noCoursesForSelectedScope) {
+    $sql = 'SELECT h.*, c.title AS campus_course_title, d.name AS department_name, d.code AS department_code, l.name AS level_name
+        FROM handouts h
+        LEFT JOIN courses c ON c.course_id = h.course_id
+        LEFT JOIN departments d ON d.department_id = h.department_id
+        LEFT JOIN academic_levels l ON l.level_id = h.level_id
+        WHERE h.status = "available"';
+    $params = [];
 
-if ($selectedDepartmentId > 0) {
-    $sql .= ' AND h.department_id = ?';
-    $params[] = $selectedDepartmentId;
-}
-if ($selectedLevelId > 0) {
-    $sql .= ' AND h.level_id = ?';
-    $params[] = $selectedLevelId;
-}
-if ($selectedCourseId > 0) {
-    $sql .= ' AND h.course_id = ?';
-    $params[] = $selectedCourseId;
-}
+    if ($selectedDepartmentId > 0) {
+        $sql .= ' AND h.department_id = ?';
+        $params[] = $selectedDepartmentId;
+    }
+    if ($selectedLevelId > 0) {
+        $sql .= ' AND h.level_id = ?';
+        $params[] = $selectedLevelId;
+    }
+    if ($selectedCourseId > 0) {
+        $sql .= ' AND h.course_id = ?';
+        $params[] = $selectedCourseId;
+    }
 
-$sql .= ' ORDER BY d.name, l.sort_order, h.course_code, h.title';
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$handouts = $noCoursesForSelectedScope ? [] : $stmt->fetchAll();
-$emptyMessage = $hasClassFilter ? 'No handouts are available for the selected department, level, or course yet.' : 'No handouts are available yet.';
+    $sql .= ' ORDER BY d.name, l.sort_order, h.course_code, h.title';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $handouts = $stmt->fetchAll();
+}
+$emptyMessage = $hasClassFilter ? 'No handouts are available for the selected department, level, or course yet.' : 'Select your department and level, then click Filter to view available class handouts.';
 if ($noCoursesForSelectedScope) {
     $scopeParts = array_filter([$selectedDepartmentName, $selectedLevelName]);
     $emptyMessage = 'No courses are currently available' . ($scopeParts ? ' for ' . implode(' ', $scopeParts) : '') . ' yet.';
@@ -84,7 +89,7 @@ page_header('Available Handouts', 'handouts');
 <main class="container py-5">
     <div class="mb-4">
         <h1 class="h2">Available handouts</h1>
-        <p class="text-muted">Choose a handout to create an order. The amount is calculated by the system from the selected handout.</p>
+        <p class="text-muted">Select your department and level first so the system only shows handouts for your class.</p>
     </div>
 
     <form class="bg-white border rounded-2 p-4 mb-4" method="get" data-handout-filter-form>
@@ -113,9 +118,9 @@ page_header('Available Handouts', 'handouts');
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="course_id">Course</label>
-                <select class="form-select" id="course_id" name="course_id" data-handout-course <?= $hasClassFilter && !$courseOptions ? 'disabled' : '' ?>>
-                    <option value=""><?= $hasClassFilter && !$courseOptions ? 'No courses available' : 'All courses' ?></option>
-                    <?php foreach ($courseOptions as $course): ?>
+                <select class="form-select" id="course_id" name="course_id" data-handout-course data-scope-filtered="<?= $hasClassFilter ? '1' : '0' ?>" <?= $courseSelectDisabled ? 'disabled' : '' ?>>
+                    <option value=""><?php if (!$hasClassFilter): ?>Select department and level first<?php elseif (!$visibleCourseOptions): ?>No courses available<?php else: ?>All courses<?php endif; ?></option>
+                    <?php foreach ($visibleCourseOptions as $course): ?>
                         <option value="<?= (int) $course['course_id'] ?>" data-department-id="<?= (int) $course['department_id'] ?>" data-level-id="<?= (int) $course['level_id'] ?>" <?= $selectedCourseId === (int) $course['course_id'] ? 'selected' : '' ?>>
                             <?= h($course['course_code'] . ' - ' . $course['title'] . ' (' . $course['department_code'] . ', ' . $course['level_name'] . ')') ?>
                         </option>
