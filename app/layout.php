@@ -14,7 +14,7 @@ function page_header(string $title, string $active = ''): void
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title><?= h($title) ?> | Student Handout Payment System</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="/Handout%20Payment%20System/assets/css/styles.css" rel="stylesheet">
+        <link href="/Handout%20Payment%20System/assets/css/styles.css?v=20260714" rel="stylesheet">
     </head>
     <body>
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">

@@ -80,29 +80,40 @@ page_header('Home', 'home');
         </div>
     </section>
 
-    <div class="row g-4">
+    <div class="d-flex justify-content-between align-items-end gap-3 flex-wrap mb-3">
+        <div>
+            <span class="text-primary fw-semibold small">Student flow</span>
+            <h2 class="h4 mb-0">How collection works</h2>
+        </div>
+        <a class="btn btn-outline-primary btn-sm" href="/Handout%20Payment%20System/receipt.php">Check receipt</a>
+    </div>
+
+    <div class="row g-4 home-steps">
         <div class="col-md-4">
-            <div class="card border-0 h-100">
-                <div class="card-body">
-                    <span class="badge text-bg-secondary mb-3">Step 1</span>
+            <div class="home-step-card h-100">
+                <div class="home-step-number">1</div>
+                <div>
+                    <span class="home-step-label">Step 1</span>
                     <h3 class="h5">Choose your class</h3>
                     <p class="text-muted mb-0">Select your department and level so you only see handouts meant for your class.</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card border-0 h-100">
-                <div class="card-body">
-                    <span class="badge text-bg-secondary mb-3">Step 2</span>
+            <div class="home-step-card h-100">
+                <div class="home-step-number">2</div>
+                <div>
+                    <span class="home-step-label">Step 2</span>
                     <h3 class="h5">Order the handout</h3>
                     <p class="text-muted mb-0">Pick the handout you need and enter your details. The price comes from the course rep's record.</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card border-0 h-100">
-                <div class="card-body">
-                    <span class="badge text-bg-secondary mb-3">Step 3</span>
+            <div class="home-step-card h-100">
+                <div class="home-step-number">3</div>
+                <div>
+                    <span class="home-step-label">Step 3</span>
                     <h3 class="h5">Pay and collect</h3>
                     <p class="text-muted mb-0">Pay through the system, keep your receipt, and show proof when collecting your copy.</p>
                 </div>

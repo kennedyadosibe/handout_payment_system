@@ -102,6 +102,7 @@
 - Updated the public handout empty state so a class with no courses says no courses are currently available.
 - Changed the default public handout page to show filter instructions instead of listing all campus courses or handouts before a student selects a class.
 - Updated the homepage so students start from a department and level finder instead of seeing campus-wide featured handouts.
+- Restyled the homepage student-flow cards with a dedicated blue card design.
 
 ### Checks Performed
 
@@ -138,6 +139,7 @@
 - Browser-tested an empty department/level and confirmed the main page says no courses are currently available.
 - Confirmed the default handout page shows filter instructions before loading class-specific handouts.
 - Confirmed the homepage routes students into the class-filtered handout flow.
+- Confirmed the homepage student-flow cards render with the updated blue design.
 
 ### Next Steps
 
