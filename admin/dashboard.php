@@ -7,7 +7,7 @@ $admin = require_admin();
 $pdo = db();
 
 $dashboardBaseUrl = '/Handout%20Payment%20System/admin/dashboard.php';
-$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'incomplete-details', 'campus-setup', 'manage-courses', 'manage-handouts', 'edit-handout', 'view-orders'];
+$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'incomplete-details', 'campus-setup', 'course-reps', 'manage-courses', 'manage-handouts', 'edit-handout', 'view-orders'];
 $returnPanel = $_POST['return_panel'] ?? 'overview';
 if (!in_array($returnPanel, $allowedReturnPanels, true)) {
     $returnPanel = 'overview';
@@ -672,6 +672,10 @@ page_header('Admin Dashboard');
                     <span>Campus setup</span>
                     <strong><?= count($departments) + count($levels) + count($courses) + count($courseReps) ?></strong>
                 </button>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="course-reps">
+                    <span>Course reps</span>
+                    <strong><?= count($courseReps) ?></strong>
+                </button>
             <?php endif; ?>
 
             <div class="sidebar-label mt-4"><?= is_super_admin($admin) ? 'Oversight' : 'Course rep tools' ?></div>
@@ -986,11 +990,61 @@ page_header('Admin Dashboard');
             <?php endif; ?>
 
             <?php if (is_super_admin($admin)): ?>
+                <section class="dashboard-panel" id="dashboard-course-reps" data-dashboard-panel="course-reps" hidden>
+                    <div class="bg-white border rounded-2 p-4">
+                        <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                            <div>
+                                <h2 class="h4 mb-1">Course rep accounts</h2>
+                                <p class="text-muted mb-0">View every representative account and open the edit form to update details or reset a password.</p>
+                            </div>
+                            <button class="btn btn-sm btn-primary align-self-md-start" type="button" data-dashboard-target="campus-setup">Add course rep</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Representative</th>
+                                        <th>Department</th>
+                                        <th>Level</th>
+                                        <th>Courses created</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($courseReps as $rep): ?>
+                                        <?php $assignedCourses = $rep['assigned_courses'] ? explode('||', $rep['assigned_courses']) : []; ?>
+                                        <tr>
+                                            <td><?= h($rep['name']) ?><br><span class="text-muted small"><?= h($rep['email']) ?></span></td>
+                                            <td><?= h($rep['department_name'] ?? 'Not set') ?></td>
+                                            <td><?= h($rep['level_name'] ?? 'Not set') ?></td>
+                                            <td>
+                                                <?php if ($assignedCourses): ?>
+                                                    <span class="small"><?= h(implode(', ', $assignedCourses)) ?></span>
+                                                <?php else: ?>
+                                                    <span class="text-muted small">No courses created yet</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?= status_badge($rep['status']) ?></td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-outline-primary" href="/Handout%20Payment%20System/admin/dashboard.php?panel=campus-setup&rep_id=<?= (int) $rep['admin_id'] ?>#course-rep-form">Edit / reset password</a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php if (!$courseReps): ?>
+                            <div class="alert alert-info mb-0">No course representative accounts have been created yet.</div>
+                        <?php endif; ?>
+                    </div>
+                </section>
+
                 <section class="dashboard-panel" id="dashboard-campus-setup" data-dashboard-panel="campus-setup" hidden>
                     <div class="bg-white border rounded-2 p-4">
                         <div class="mb-4">
                             <h2 class="h4 mb-1">Campus setup</h2>
-                            <p class="text-muted mb-0">Create the campus structure and course rep accounts. Course reps publish available handouts and set prices.</p>
+                            <p class="text-muted mb-0">Create departments and course rep accounts. Use Course reps to review all accounts and open password resets.</p>
                         </div>
 
                         <div class="row g-4">

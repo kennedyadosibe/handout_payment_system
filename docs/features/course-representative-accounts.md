@@ -11,10 +11,11 @@ Super admins can create and manage course representative accounts, set each rep'
 3. In `Add course rep`, enter the representative name, email, and temporary password.
 4. Select the representative department and level.
 5. Click `Save course rep`.
-6. To update a rep, click `Edit` beside the rep in the course representative list.
-7. Update the name, email, department, level, or status.
-8. Enter a new password only when the rep password should be reset.
-9. Click `Update course rep`.
+6. Open `Course reps` from the super admin sidebar to see all representative accounts.
+7. To update a rep, click `Edit / reset password` beside the rep.
+8. Update the name, email, department, level, or status.
+9. Enter a new password only when the rep password should be reset.
+10. Click `Update course rep`.
 
 ## Files Changed
 
@@ -41,6 +42,7 @@ Super admins no longer select course assignments from the rep form. The represen
 - Run PHP syntax checks for `admin/dashboard.php`.
 - Create a temporary course representative from Campus setup.
 - Confirm the representative appears in the course rep list with the selected department and class.
+- Confirm the representative appears in the dedicated `Course reps` super admin panel.
 - Edit the temporary representative name, email, department, level, status, and password.
 - Confirm inactive representatives cannot log in.
 - Confirm resetting the password allows the edited representative to log in with the new password after reactivation.
