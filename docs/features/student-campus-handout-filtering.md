@@ -12,7 +12,7 @@ Students can filter available handouts by department, level, and course before o
 4. Review the matching handouts and click `Order handout`.
 5. Confirm the department, level, and course on the order page before entering student details.
 
-When a department or level is selected, the page only shows handouts inside that selected scope. If no handouts have been published for that class yet, the page shows an empty-state message instead of showing handouts from other departments or levels.
+When a department or level is selected, the page only shows handouts inside that selected scope. If no courses exist for that class yet, the page says no courses are currently available and shows no handouts from other departments or levels. If courses exist but no handouts have been published, it shows a handout-specific empty-state message.
 
 ## Files Changed
 
@@ -40,5 +40,6 @@ The course dropdown is narrowed in PHP and in the browser after a department or 
 - Filter by Computer Science, Level 200, and H001.
 - Confirm the visible handouts match the selected course.
 - Filter by a department/level combination that has no handouts and confirm no other handouts appear.
+- Filter by a department/level combination that has no courses and confirm the main empty state says no courses are currently available.
 - Confirm the course dropdown does not show courses from other departments or levels when a class filter is active.
 - Open an order page and confirm the selected handout shows the campus course context.

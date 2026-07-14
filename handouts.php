@@ -17,11 +17,26 @@ $selectedDepartmentId = (int) ($_GET['department_id'] ?? 0);
 $selectedLevelId = (int) ($_GET['level_id'] ?? 0);
 $selectedCourseId = (int) ($_GET['course_id'] ?? 0);
 $hasClassFilter = $selectedDepartmentId > 0 || $selectedLevelId > 0 || $selectedCourseId > 0;
+$selectedDepartmentName = '';
+foreach ($departments as $department) {
+    if ((int) $department['department_id'] === $selectedDepartmentId) {
+        $selectedDepartmentName = $department['name'];
+        break;
+    }
+}
+$selectedLevelName = '';
+foreach ($levels as $level) {
+    if ((int) $level['level_id'] === $selectedLevelId) {
+        $selectedLevelName = $level['name'];
+        break;
+    }
+}
 $courseOptions = array_values(array_filter($courses, function (array $course) use ($selectedDepartmentId, $selectedLevelId): bool {
     $matchesDepartment = $selectedDepartmentId <= 0 || (int) $course['department_id'] === $selectedDepartmentId;
     $matchesLevel = $selectedLevelId <= 0 || (int) $course['level_id'] === $selectedLevelId;
     return $matchesDepartment && $matchesLevel;
 }));
+$noCoursesForSelectedScope = ($selectedDepartmentId > 0 || $selectedLevelId > 0) && !$courseOptions;
 $selectedCourseIsAvailable = $selectedCourseId <= 0;
 foreach ($courseOptions as $course) {
     if ((int) $course['course_id'] === $selectedCourseId) {
@@ -57,7 +72,12 @@ if ($selectedCourseId > 0) {
 $sql .= ' ORDER BY d.name, l.sort_order, h.course_code, h.title';
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
-$handouts = $stmt->fetchAll();
+$handouts = $noCoursesForSelectedScope ? [] : $stmt->fetchAll();
+$emptyMessage = $hasClassFilter ? 'No handouts are available for the selected department, level, or course yet.' : 'No handouts are available yet.';
+if ($noCoursesForSelectedScope) {
+    $scopeParts = array_filter([$selectedDepartmentName, $selectedLevelName]);
+    $emptyMessage = 'No courses are currently available' . ($scopeParts ? ' for ' . implode(' ', $scopeParts) : '') . ' yet.';
+}
 
 page_header('Available Handouts', 'handouts');
 ?>
@@ -134,7 +154,7 @@ page_header('Available Handouts', 'handouts');
         <?php endforeach; ?>
     </div>
     <?php if (!$handouts): ?>
-        <div class="alert alert-info"><?= $hasClassFilter ? 'No handouts are available for the selected department, level, or course yet.' : 'No handouts are available yet.' ?></div>
+        <div class="alert alert-info"><?= h($emptyMessage) ?></div>
     <?php endif; ?>
 </main>
 <script src="/Handout%20Payment%20System/assets/js/handouts.js?v=20260714"></script>

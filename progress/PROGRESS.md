@@ -99,6 +99,7 @@
 - Added a dedicated super admin Course reps panel listing every representative account with edit/password-reset entry points.
 - Tightened public handout filtering so selected department/level scopes never fall back to showing other class handouts.
 - Tightened the public course dropdown so selected department/level scopes do not show courses from other classes.
+- Updated the public handout empty state so a class with no courses says no courses are currently available.
 
 ### Checks Performed
 
@@ -132,6 +133,7 @@
 - Ran PHP syntax checks for `admin/dashboard.php` after adding the super admin Course reps panel.
 - Ran PHP syntax checks for `handouts.php` and JavaScript syntax checks for `assets/js/handouts.js` after tightening public class filtering.
 - Browser-tested an empty department/level and confirmed the course dropdown does not show unrelated courses.
+- Browser-tested an empty department/level and confirmed the main page says no courses are currently available.
 
 ### Next Steps
 
