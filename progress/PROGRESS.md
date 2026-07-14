@@ -101,6 +101,7 @@
 - Tightened the public course dropdown so selected department/level scopes do not show courses from other classes.
 - Updated the public handout empty state so a class with no courses says no courses are currently available.
 - Changed the default public handout page to show filter instructions instead of listing all campus courses or handouts before a student selects a class.
+- Updated the homepage so students start from a department and level finder instead of seeing campus-wide featured handouts.
 
 ### Checks Performed
 
@@ -136,6 +137,7 @@
 - Browser-tested an empty department/level and confirmed the course dropdown does not show unrelated courses.
 - Browser-tested an empty department/level and confirmed the main page says no courses are currently available.
 - Confirmed the default handout page shows filter instructions before loading class-specific handouts.
+- Confirmed the homepage routes students into the class-filtered handout flow.
 
 ### Next Steps
 

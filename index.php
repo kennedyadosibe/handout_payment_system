@@ -4,28 +4,21 @@ require_once __DIR__ . '/app/bootstrap.php';
 require_once __DIR__ . '/app/layout.php';
 
 $pdo = db();
-$totalHandouts = (int) $pdo->query('SELECT COUNT(*) FROM handouts')->fetchColumn();
+$departments = $pdo->query('SELECT * FROM departments WHERE status = "active" ORDER BY name')->fetchAll();
+$levels = $pdo->query('SELECT * FROM academic_levels WHERE status = "active" ORDER BY sort_order, name')->fetchAll();
+$activeDepartments = count($departments);
+$activeCourses = (int) $pdo->query('SELECT COUNT(*) FROM courses WHERE status = "active"')->fetchColumn();
 $availableHandouts = (int) $pdo->query('SELECT COUNT(*) FROM handouts WHERE status = "available"')->fetchColumn();
-$paidOrders = (int) $pdo->query('SELECT COUNT(*) FROM orders WHERE payment_status = "paid"')->fetchColumn();
-$stmt = $pdo->query('SELECT h.*, c.title AS campus_course_title, d.name AS department_name, l.name AS level_name
-    FROM handouts h
-    LEFT JOIN courses c ON c.course_id = h.course_id
-    LEFT JOIN departments d ON d.department_id = h.department_id
-    LEFT JOIN academic_levels l ON l.level_id = h.level_id
-    WHERE h.status = "available"
-    ORDER BY h.created_at DESC
-    LIMIT 3');
-$featured = $stmt->fetchAll();
 
 page_header('Home', 'home');
 ?>
 <section class="hero">
     <div class="container py-5">
         <span class="badge text-bg-light mb-3">Physical handout ordering</span>
-        <h1 class="display-5">Order course handouts, pay the correct amount, and collect your copy with proof.</h1>
-        <p class="lead mt-3">Students choose an available handout and the system calculates the price from the handout record. Course representatives manage payments, copies and collection from one dashboard.</p>
+        <h1 class="display-5">Find handouts for your class, pay the correct amount, and collect with proof.</h1>
+        <p class="lead mt-3">Start by selecting your department and level. The system only shows handouts for that class, then calculates the price from the official handout record.</p>
         <div class="d-flex gap-2 flex-wrap mt-4">
-            <a class="btn btn-light btn-lg" href="/Handout%20Payment%20System/handouts.php">Browse Handouts</a>
+            <a class="btn btn-light btn-lg" href="#class-finder">Find Class Handouts</a>
             <a class="btn btn-outline-light btn-lg" href="/Handout%20Payment%20System/receipt.php">Find Receipt</a>
         </div>
     </div>
@@ -35,50 +28,86 @@ page_header('Home', 'home');
     <div class="row g-3 mb-5">
         <div class="col-md-4">
             <div class="bg-white p-4 rounded-2 stat">
-                <div class="text-muted small">Total handouts</div>
-                <div class="h2 mb-0"><?= $totalHandouts ?></div>
+                <div class="text-muted small">Departments</div>
+                <div class="h2 mb-0"><?= $activeDepartments ?></div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="bg-white p-4 rounded-2 stat">
-                <div class="text-muted small">Available now</div>
+                <div class="text-muted small">Active courses</div>
+                <div class="h2 mb-0"><?= $activeCourses ?></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="bg-white p-4 rounded-2 stat">
+                <div class="text-muted small">Available handouts</div>
                 <div class="h2 mb-0"><?= $availableHandouts ?></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="bg-white p-4 rounded-2 stat">
-                <div class="text-muted small">Paid orders recorded</div>
-                <div class="h2 mb-0"><?= $paidOrders ?></div>
             </div>
         </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0">Available handouts</h2>
-        <a href="/Handout%20Payment%20System/handouts.php" class="btn btn-outline-primary btn-sm">View all</a>
-    </div>
-    <div class="row g-4">
-        <?php foreach ($featured as $handout): ?>
-            <div class="col-md-4">
-                <div class="card handout-card border-0">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between gap-2">
-                            <span class="badge text-bg-secondary"><?= h($handout['course_code']) ?></span>
-                            <span class="price-pill"><?= money($handout['current_price']) ?></span>
-                        </div>
-                        <h3 class="h5 mt-3"><?= h($handout['title']) ?></h3>
-                        <div class="text-muted small mb-2">
-                            <?= h($handout['department_name'] ?? 'Department not set') ?> · <?= h($handout['level_name'] ?? 'Level not set') ?>
-                            <?php if (!empty($handout['campus_course_title'])): ?>
-                                <br><?= h($handout['campus_course_title']) ?>
-                            <?php endif; ?>
-                        </div>
-                        <p class="text-muted"><?= h($handout['description']) ?></p>
-                        <a class="btn btn-primary w-100" href="/Handout%20Payment%20System/order.php?handout_id=<?= (int) $handout['handout_id'] ?>">Order</a>
+    <section id="class-finder" class="bg-white border rounded-2 p-4 mb-5">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-5">
+                <h2 class="h4">Find your class handouts</h2>
+                <p class="text-muted mb-0">Choose your department and level first. If your course rep has published handouts for that class, they will appear on the next page.</p>
+            </div>
+            <div class="col-lg-7">
+                <form class="row g-3 align-items-end" action="/Handout%20Payment%20System/handouts.php" method="get">
+                    <div class="col-md-5">
+                        <label class="form-label" for="home_department_id">Department</label>
+                        <select class="form-select" id="home_department_id" name="department_id" required>
+                            <option value="">Select department</option>
+                            <?php foreach ($departments as $department): ?>
+                                <option value="<?= (int) $department['department_id'] ?>"><?= h($department['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="home_level_id">Level</label>
+                        <select class="form-select" id="home_level_id" name="level_id" required>
+                            <option value="">Select level</option>
+                            <?php foreach ($levels as $level): ?>
+                                <option value="<?= (int) $level['level_id'] ?>"><?= h($level['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <button class="btn btn-primary" type="submit">Find handouts</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 h-100">
+                <div class="card-body">
+                    <span class="badge text-bg-secondary mb-3">Step 1</span>
+                    <h3 class="h5">Choose your class</h3>
+                    <p class="text-muted mb-0">Select your department and level so you only see handouts meant for your class.</p>
                 </div>
             </div>
-        <?php endforeach; ?>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 h-100">
+                <div class="card-body">
+                    <span class="badge text-bg-secondary mb-3">Step 2</span>
+                    <h3 class="h5">Order the handout</h3>
+                    <p class="text-muted mb-0">Pick the handout you need and enter your details. The price comes from the course rep's record.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 h-100">
+                <div class="card-body">
+                    <span class="badge text-bg-secondary mb-3">Step 3</span>
+                    <h3 class="h5">Pay and collect</h3>
+                    <p class="text-muted mb-0">Pay through the system, keep your receipt, and show proof when collecting your copy.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </main>
 <?php page_footer(); ?>
