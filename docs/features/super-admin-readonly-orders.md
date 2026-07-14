@@ -7,11 +7,11 @@ Super admins can review paid orders and collection status without changing order
 ## How To Use
 
 1. Log in as a `super_admin`.
-2. Open `View orders` or `Paid students` from the dashboard.
+2. Open `View orders` from the dashboard.
 3. Review paid students, contact details, handouts, amounts, and collection status.
 4. No `Save`, `Given`, or `Delete` order controls are shown for super admins.
 
-Course reps still see the editable controls for orders in their assigned courses.
+Course reps still see the editable controls for orders in their assigned courses. `Paid students` and `Incomplete details` belong to the course rep dashboard, not the super admin dashboard.
 
 ## Files Changed
 
@@ -25,5 +25,6 @@ The restriction is enforced in both the UI and POST handlers. A direct super adm
 ## Testing Notes
 
 - Run PHP syntax checks for `admin/dashboard.php` and `admin/orders/index.php`.
-- Confirm super admins can open paid order lists without editable order controls.
+- Confirm super admins can open `View orders` without editable order controls.
+- Confirm super admins do not see `Paid students` or `Incomplete details` dashboard sections.
 - Confirm course reps still see collection update, `Given`, and `Delete` controls for their assigned course orders.

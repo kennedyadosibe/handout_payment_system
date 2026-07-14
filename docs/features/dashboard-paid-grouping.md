@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Groups paid students on the admin dashboard under the handout they paid for, instead of showing all paid names in one mixed list.
+Groups paid students on the course rep dashboard under the handout they paid for, instead of showing all paid names in one mixed list.
 
 ## User Flow
 
-Admins open the dashboard and see `Paid students by handout`. Each handout section shows its course code, handout title, total paid students, total money received, and the students who paid for that handout.
+Course reps open the dashboard and see `Paid students by handout`. Each handout section shows its course code, handout title, total paid students, total money received, and the students who paid for that handout. Super admins use read-only `View orders` and course revenue checks instead.
 
 ## Files Changed
 

@@ -8,8 +8,9 @@ The admin dashboard now uses a sidebar to keep the page clean. Admins can click 
 
 1. Admin opens the dashboard.
 2. The Overview panel shows the system counters.
-3. Admin clicks Revenue to view revenue grouped by handout.
-4. Admin clicks Paid students to view paid student groups, delete records, mark handouts as given, and search inside each handout list.
+3. Course reps click Revenue to view revenue grouped by handout.
+4. Course reps click Paid students to view paid student groups, delete records, mark handouts as given, and search inside each handout list.
+5. Super admins do not see Paid students or Incomplete details in their sidebar.
 
 ## Changed Files
 
@@ -27,3 +28,4 @@ The admin dashboard now uses a sidebar to keep the page clean. Admins can click 
 - Ran PHP syntax checks for `admin/dashboard.php`.
 - Verified sidebar section buttons switch visible dashboard panels.
 - Verified the paid-students search keeps the admin on the paid-students panel.
+- Verified super admins only see oversight and setup dashboard sections.

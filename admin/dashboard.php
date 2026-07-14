@@ -649,27 +649,29 @@ page_header('Admin Dashboard');
                 <span>Revenue</span>
                 <strong><?= count($revenueByHandout) ?></strong>
             </button>
-            <button class="dashboard-nav-item" type="button" data-dashboard-target="paid-students">
-                <span>Paid students</span>
-                <strong><?= h((string) $stats['paid_orders']) ?></strong>
-            </button>
-            <button class="dashboard-nav-item" type="button" data-dashboard-target="incomplete-details">
-                <span>Incomplete details</span>
-                <strong><?= count($incompleteOrders) ?></strong>
-            </button>
-            <?php if ($paidByHandout): ?>
-                <div class="dashboard-subnav" aria-label="Paid student handouts">
-                    <button class="dashboard-subnav-item active" type="button" data-course-target="all">
-                        <span>All paid lists</span>
-                    </button>
-                    <?php foreach ($paidByHandout as $group): ?>
-                        <?php $courseKey = md5($group['course_code'] . '|' . $group['title']); ?>
-                        <button class="dashboard-subnav-item" type="button" data-course-target="<?= h($courseKey) ?>">
-                            <span><?= h($group['course_code']) ?></span>
-                            <small><?= count($group['students']) ?></small>
+            <?php if (!is_super_admin($admin)): ?>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="paid-students">
+                    <span>Paid students</span>
+                    <strong><?= h((string) $stats['paid_orders']) ?></strong>
+                </button>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="incomplete-details">
+                    <span>Incomplete details</span>
+                    <strong><?= count($incompleteOrders) ?></strong>
+                </button>
+                <?php if ($paidByHandout): ?>
+                    <div class="dashboard-subnav" aria-label="Paid student handouts">
+                        <button class="dashboard-subnav-item active" type="button" data-course-target="all">
+                            <span>All paid lists</span>
                         </button>
-                    <?php endforeach; ?>
-                </div>
+                        <?php foreach ($paidByHandout as $group): ?>
+                            <?php $courseKey = md5($group['course_code'] . '|' . $group['title']); ?>
+                            <button class="dashboard-subnav-item" type="button" data-course-target="<?= h($courseKey) ?>">
+                                <span><?= h($group['course_code']) ?></span>
+                                <small><?= count($group['students']) ?></small>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if (is_super_admin($admin)): ?>
@@ -703,12 +705,24 @@ page_header('Admin Dashboard');
         <div class="dashboard-content">
             <section class="dashboard-panel" id="dashboard-overview" data-dashboard-panel="overview">
                 <div class="row g-3">
-                    <?php foreach ([
-                        'Total handouts' => $stats['total_handouts'],
-                        'Available' => $stats['available_handouts'],
-                        'Paid orders' => $stats['paid_orders'],
-                        'Saved incomplete details' => $stats['recorded_unpaid'],
-                    ] as $label => $value): ?>
+                    <?php
+                    if (is_super_admin($admin)) {
+                        $overviewCards = [
+                            'Departments' => count($departments),
+                            'Fixed levels' => count($levels),
+                            'Campus courses' => count($courses),
+                            'Course reps' => count($courseReps),
+                        ];
+                    } else {
+                        $overviewCards = [
+                            'Total handouts' => $stats['total_handouts'],
+                            'Available' => $stats['available_handouts'],
+                            'Paid orders' => $stats['paid_orders'],
+                        ];
+                        $overviewCards['Saved incomplete details'] = $stats['recorded_unpaid'];
+                    }
+                    ?>
+                    <?php foreach ($overviewCards as $label => $value): ?>
                         <div class="col-md-6 col-xl-3">
                             <div class="card dashboard-card h-100">
                                 <div class="card-body">
@@ -836,6 +850,7 @@ page_header('Admin Dashboard');
                 </div>
             </section>
 
+            <?php if (!is_super_admin($admin)): ?>
             <section class="dashboard-panel" id="dashboard-paid-students" data-dashboard-panel="paid-students" hidden>
                 <div class="bg-white border rounded-2 p-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
@@ -972,6 +987,7 @@ page_header('Admin Dashboard');
                     <?php endif; ?>
                 </div>
             </section>
+            <?php endif; ?>
 
             <?php if (is_super_admin($admin)): ?>
                 <section class="dashboard-panel" id="dashboard-campus-setup" data-dashboard-panel="campus-setup" hidden>
@@ -1354,7 +1370,9 @@ page_header('Admin Dashboard');
                             <h2 class="h4 mb-1">View orders</h2>
                             <p class="text-muted mb-0"><?= is_super_admin($admin) ? 'Only paid students appear here. Super admins can review orders, while course reps update collection status or remove paid records.' : 'Only paid students appear here. Use this list to update collection status or remove a paid record.' ?></p>
                         </div>
-                        <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="paid-students">Grouped paid lists</button>
+                        <?php if (!is_super_admin($admin)): ?>
+                            <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="paid-students">Grouped paid lists</button>
+                        <?php endif; ?>
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
