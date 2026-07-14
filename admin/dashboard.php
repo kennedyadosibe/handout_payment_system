@@ -450,6 +450,13 @@ if ($editHandoutId > 0) {
     }
 }
 $studentSearch = trim($_GET['student_name'] ?? '');
+$departments = $pdo->query('SELECT * FROM departments ORDER BY name')->fetchAll();
+$levels = $pdo->query('SELECT * FROM academic_levels ORDER BY sort_order, name')->fetchAll();
+$courses = $pdo->query('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
+    FROM courses c
+    JOIN departments d ON d.department_id = c.department_id
+    JOIN academic_levels l ON l.level_id = c.level_id
+    ORDER BY d.name, l.sort_order, c.course_code')->fetchAll();
 $revenueSql = 'SELECT o.handout_id, o.course_code_snapshot, o.handout_title_snapshot,
         COUNT(*) AS paid_count,
         COALESCE(SUM(o.price_snapshot), 0) AS total_revenue
@@ -467,8 +474,14 @@ $stmt = $pdo->prepare($revenueSql);
 $stmt->execute($revenueParams);
 $revenueByHandout = $stmt->fetchAll();
 $revenueByCourse = [];
+$revenueCourseFilters = [
+    'department_id' => (int) ($_GET['revenue_department_id'] ?? 0),
+    'level_id' => (int) ($_GET['revenue_level_id'] ?? 0),
+    'course_id' => (int) ($_GET['revenue_course_id'] ?? 0),
+];
+$revenueByCourseTotal = 0.0;
 if (is_super_admin($admin)) {
-    $revenueByCourse = $pdo->query('SELECT
+    $revenueByCourseSql = 'SELECT
             COALESCE(d.name, "Unassigned department") AS department_name,
             COALESCE(l.name, "Unassigned class") AS level_name,
             COALESCE(c.course_code, o.course_code_snapshot) AS course_code,
@@ -481,9 +494,28 @@ if (is_super_admin($admin)) {
         LEFT JOIN courses c ON c.course_id = h.course_id
         LEFT JOIN departments d ON d.department_id = h.department_id
         LEFT JOIN academic_levels l ON l.level_id = h.level_id
-        WHERE o.payment_status = "paid"
-        GROUP BY d.name, l.name, c.course_code, c.title, o.course_code_snapshot
-        ORDER BY d.name, l.name, c.course_code, o.course_code_snapshot')->fetchAll();
+        WHERE o.payment_status = "paid"';
+    $revenueByCourseParams = [];
+    if ($revenueCourseFilters['department_id'] > 0) {
+        $revenueByCourseSql .= ' AND h.department_id = ?';
+        $revenueByCourseParams[] = $revenueCourseFilters['department_id'];
+    }
+    if ($revenueCourseFilters['level_id'] > 0) {
+        $revenueByCourseSql .= ' AND h.level_id = ?';
+        $revenueByCourseParams[] = $revenueCourseFilters['level_id'];
+    }
+    if ($revenueCourseFilters['course_id'] > 0) {
+        $revenueByCourseSql .= ' AND h.course_id = ?';
+        $revenueByCourseParams[] = $revenueCourseFilters['course_id'];
+    }
+    $revenueByCourseSql .= ' GROUP BY d.name, l.name, c.course_code, c.title, o.course_code_snapshot
+        ORDER BY d.name, l.name, c.course_code, o.course_code_snapshot';
+    $stmt = $pdo->prepare($revenueByCourseSql);
+    $stmt->execute($revenueByCourseParams);
+    $revenueByCourse = $stmt->fetchAll();
+    foreach ($revenueByCourse as $revenue) {
+        $revenueByCourseTotal += (float) $revenue['total_revenue'];
+    }
 }
 $dashboardHandoutSql = 'SELECT h.*, c.title AS campus_course_title, d.code AS department_code, l.name AS level_name, COUNT(o.order_id) AS order_count
     FROM handouts h
@@ -529,13 +561,6 @@ $incompleteOrdersSql .= ' WHERE o.payment_status = "not_paid" ORDER BY o.ordered
 $stmt = $pdo->prepare($incompleteOrdersSql);
 $stmt->execute($incompleteOrderParams);
 $incompleteOrders = $stmt->fetchAll();
-$departments = $pdo->query('SELECT * FROM departments ORDER BY name')->fetchAll();
-$levels = $pdo->query('SELECT * FROM academic_levels ORDER BY sort_order, name')->fetchAll();
-$courses = $pdo->query('SELECT c.*, d.name AS department_name, d.code AS department_code, l.name AS level_name
-    FROM courses c
-    JOIN departments d ON d.department_id = c.department_id
-    JOIN academic_levels l ON l.level_id = c.level_id
-    ORDER BY d.name, l.sort_order, c.course_code')->fetchAll();
 $currentRepScope = null;
 if (!is_super_admin($admin)) {
     $stmt = $pdo->prepare('SELECT d.name AS department_name, d.code AS department_code, l.name AS level_name
@@ -709,6 +734,56 @@ page_header('Admin Dashboard');
                         <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="view-orders">Open paid list</button>
                     </div>
                     <?php if (is_super_admin($admin)): ?>
+                        <form class="campus-form border rounded-2 p-3 mb-4" method="get" data-revenue-filter-form>
+                            <input type="hidden" name="panel" value="revenue">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label" for="revenue_department_id">Department</label>
+                                    <select class="form-select" id="revenue_department_id" name="revenue_department_id" data-revenue-department>
+                                        <option value="0">All departments</option>
+                                        <?php foreach ($departments as $department): ?>
+                                            <option value="<?= (int) $department['department_id'] ?>" <?= $revenueCourseFilters['department_id'] === (int) $department['department_id'] ? 'selected' : '' ?>>
+                                                <?= h($department['name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" for="revenue_level_id">Level</label>
+                                    <select class="form-select" id="revenue_level_id" name="revenue_level_id" data-revenue-level>
+                                        <option value="0">All levels</option>
+                                        <?php foreach ($levels as $level): ?>
+                                            <option value="<?= (int) $level['level_id'] ?>" <?= $revenueCourseFilters['level_id'] === (int) $level['level_id'] ? 'selected' : '' ?>>
+                                                <?= h($level['name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="revenue_course_id">Course</label>
+                                    <select class="form-select" id="revenue_course_id" name="revenue_course_id" data-revenue-course>
+                                        <option value="0">All courses</option>
+                                        <?php foreach ($courses as $course): ?>
+                                            <option value="<?= (int) $course['course_id'] ?>" data-department-id="<?= (int) $course['department_id'] ?>" data-level-id="<?= (int) $course['level_id'] ?>" <?= $revenueCourseFilters['course_id'] === (int) $course['course_id'] ? 'selected' : '' ?>>
+                                                <?= h($course['department_code'] . ' · ' . $course['level_name'] . ' · ' . $course['course_code'] . ' - ' . $course['title']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary w-100" type="submit">Filter</button>
+                                </div>
+                            </div>
+                            <?php if ($revenueCourseFilters['department_id'] > 0 || $revenueCourseFilters['level_id'] > 0 || $revenueCourseFilters['course_id'] > 0): ?>
+                                <a class="btn btn-sm btn-outline-secondary mt-3" href="/Handout%20Payment%20System/admin/dashboard.php?panel=revenue">Clear filters</a>
+                            <?php endif; ?>
+                        </form>
+                        <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                            <div class="text-muted small">
+                                Showing <?= count($revenueByCourse) ?> course revenue row<?= count($revenueByCourse) === 1 ? '' : 's' ?>.
+                            </div>
+                            <div class="fw-bold">Filtered total: <?= money($revenueByCourseTotal) ?></div>
+                        </div>
                         <div class="table-responsive">
                             <table class="table align-middle mb-0">
                                 <thead>
@@ -1342,5 +1417,5 @@ page_header('Admin Dashboard');
         </div>
     </div>
 </main>
-<script src="/Handout%20Payment%20System/assets/js/dashboard.js?v=20260713"></script>
+<script src="/Handout%20Payment%20System/assets/js/dashboard.js?v=20260714"></script>
 <?php page_footer(); ?>

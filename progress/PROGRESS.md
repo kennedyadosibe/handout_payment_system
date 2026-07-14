@@ -91,6 +91,7 @@
 - Removed level creation from the super admin dashboard because the system uses fixed Level 100, Level 200, Level 300, and Level 400 records.
 - Added setup cleanup for unused non-standard level records from older local setup runs.
 - Made paid order lists read-only for super admins while keeping order updates and deletes available to course reps.
+- Added super admin revenue filters for department, level, and course with a filtered total.
 
 ### Checks Performed
 
@@ -116,6 +117,7 @@
 - Ran PHP syntax checks for `admin/dashboard.php` after removing the level creation form and handler.
 - Ran PHP syntax checks for `setup.php` after adding fixed-level cleanup.
 - Ran PHP syntax checks for `admin/dashboard.php` and `admin/orders/index.php` after making super admin order views read-only.
+- Ran PHP syntax checks for `admin/dashboard.php` after adding super admin revenue filters.
 
 ### Next Steps
 
