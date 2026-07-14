@@ -7,11 +7,12 @@ Handouts are now attached to official campus course records instead of relying o
 ## How To Use
 
 1. Log in as a course representative.
-2. Open `Manage handouts`.
-3. Click `Add handout` or edit an existing handout.
-4. Select the official `Campus course`.
-5. Enter the handout title, price, status, and description.
-6. Save the handout.
+2. Open `Manage courses` and create any missing course for the assigned department and class.
+3. Open `Manage handouts`.
+4. Click `Add handout` or edit an existing handout.
+5. Select the campus course.
+6. Enter the handout title, price, status, and description.
+7. Save the handout.
 
 The selected course automatically supplies the handout `department_id`, `level_id`, `course_id`, and display `course_code`.
 
@@ -34,22 +35,24 @@ The feature uses the existing nullable campus scope columns on `handouts`:
 
 Existing order snapshots are not rewritten when a handout course changes. Paid and unpaid order history keeps the course code and title captured at order time.
 
-Course representatives only receive course options from `admin_course_assignments`. Their handout lists, paid lists, revenue cards, incomplete details, and collection actions are scoped to those assigned courses.
+Course representatives only receive course options from `admin_course_assignments`. Creating a course automatically assigns it to the logged-in representative. Their handout lists, paid lists, revenue cards, incomplete details, and collection actions are scoped to those assigned courses.
 
-Super admins manage campus setup and course representative accounts. They do not publish handouts or set handout prices.
+Super admins manage campus setup and course representative accounts. They do not create courses, publish handouts, or set handout prices.
 
 ## Official Documentation Checked
 
 - MySQL `JOIN` clause documentation: https://dev.mysql.com/doc/refman/8.4/en/join.html
 - PHP PDO prepared statements documentation: https://www.php.net/manual/en/pdo.prepare.php
+- PHP PDO transactions documentation: https://www.php.net/manual/en/pdo.transactions.php
 
 ## Testing Notes
 
 - Run PHP syntax checks for `app/auth.php`, `admin/dashboard.php`, `admin/handouts/edit.php`, `admin/handouts/index.php`, and `admin/orders/index.php`.
-- Create a temporary handout from the dashboard using a selected campus course.
+- Create a temporary course from the course representative dashboard.
+- Create a temporary handout from the dashboard using the selected campus course.
 - Confirm the handout stores the selected `department_id`, `level_id`, `course_id`, and `course_code`.
 - Remove the temporary handout after testing.
-- Create a temporary course representative assigned to one course.
-- Confirm the representative sees only that course in the handout editor.
-- Confirm super admins do not see the handout publishing tools and cannot open the older handout management pages directly.
+- Create a temporary course representative and a temporary course from that representative dashboard.
+- Confirm the representative sees only their created or assigned courses in the handout editor.
+- Confirm super admins do not see course creation or handout publishing tools and cannot open the older handout management pages directly.
 - Remove the temporary representative after testing.

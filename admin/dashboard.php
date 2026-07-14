@@ -7,7 +7,7 @@ $admin = require_admin();
 $pdo = db();
 
 $dashboardBaseUrl = '/Handout%20Payment%20System/admin/dashboard.php';
-$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'incomplete-details', 'campus-setup', 'manage-handouts', 'edit-handout', 'view-orders'];
+$allowedReturnPanels = ['overview', 'revenue', 'paid-students', 'incomplete-details', 'campus-setup', 'manage-courses', 'manage-handouts', 'edit-handout', 'view-orders'];
 $returnPanel = $_POST['return_panel'] ?? 'overview';
 if (!in_array($returnPanel, $allowedReturnPanels, true)) {
     $returnPanel = 'overview';
@@ -70,30 +70,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'save_course') {
-        if (!is_super_admin($admin)) {
-            flash('Super admin access is required.', 'warning');
+        if (is_super_admin($admin)) {
+            flash('Course representatives are responsible for creating their courses.', 'warning');
             redirect($dashboardBaseUrl . '?panel=overview');
         }
 
-        $departmentId = (int) ($_POST['department_id'] ?? 0);
-        $levelId = (int) ($_POST['level_id'] ?? 0);
+        $departmentId = (int) ($admin['department_id'] ?? 0);
+        $levelId = (int) ($admin['level_id'] ?? 0);
         $courseCode = strtoupper(trim($_POST['course_code'] ?? ''));
         $courseTitle = trim($_POST['course_title'] ?? '');
 
         if ($departmentId <= 0 || $levelId <= 0 || $courseCode === '' || $courseTitle === '') {
-            flash('Department, level, course code, and course title are required.', 'danger');
-            redirect($dashboardBaseUrl . '?panel=campus-setup');
+            flash('Your rep account needs a department, class, course code, and course title before a course can be saved.', 'danger');
+            redirect($dashboardBaseUrl . '?panel=manage-courses');
         }
 
+        $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare('INSERT INTO courses (department_id, level_id, course_code, title) VALUES (?, ?, ?, ?)');
             $stmt->execute([$departmentId, $levelId, $courseCode, $courseTitle]);
+            $courseId = (int) $pdo->lastInsertId();
+
+            $stmt = $pdo->prepare('INSERT INTO admin_course_assignments (admin_id, course_id) VALUES (?, ?)');
+            $stmt->execute([(int) $admin['admin_id'], $courseId]);
+
+            $pdo->commit();
             flash('Course added.');
         } catch (Throwable $exception) {
+            $pdo->rollBack();
             flash('Course could not be added. Check that it is not already created for that department and level.', 'danger');
         }
 
-        redirect($dashboardBaseUrl . '?panel=campus-setup');
+        redirect($dashboardBaseUrl . '?panel=manage-courses');
     }
 
     if ($action === 'save_course_rep') {
@@ -109,11 +117,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $repStatus = $_POST['rep_status'] ?? 'active';
         $departmentId = (int) ($_POST['rep_department_id'] ?? 0);
         $levelId = (int) ($_POST['rep_level_id'] ?? 0);
+        $courseIdsProvided = isset($_POST['course_ids']);
         $courseIds = array_values(array_unique(array_map('intval', $_POST['course_ids'] ?? [])));
         $courseIds = array_filter($courseIds, fn (int $courseId): bool => $courseId > 0);
 
-        if ($repName === '' || !filter_var($repEmail, FILTER_VALIDATE_EMAIL) || ($repId <= 0 && $repPassword === '') || $departmentId <= 0 || $levelId <= 0 || !$courseIds || !in_array($repStatus, ['active', 'inactive'], true)) {
-            flash('Rep name, valid email, department, level, status, and at least one course are required. New reps also need a password.', 'danger');
+        if ($repName === '' || !filter_var($repEmail, FILTER_VALIDATE_EMAIL) || ($repId <= 0 && $repPassword === '') || $departmentId <= 0 || $levelId <= 0 || !in_array($repStatus, ['active', 'inactive'], true)) {
+            flash('Rep name, valid email, department, level, and status are required. New reps also need a password.', 'danger');
             redirect($dashboardBaseUrl . '?panel=campus-setup');
         }
 
@@ -126,12 +135,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM courses WHERE department_id = ? AND level_id = ? AND course_id IN ($placeholders)");
-        $stmt->execute([$departmentId, $levelId, ...$courseIds]);
-        if ((int) $stmt->fetchColumn() !== count($courseIds)) {
-            flash('Selected courses must belong to the chosen department and level.', 'danger');
-            redirect($dashboardBaseUrl . '?panel=campus-setup');
+        if ($courseIdsProvided && $courseIds) {
+            $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM courses WHERE department_id = ? AND level_id = ? AND course_id IN ($placeholders)");
+            $stmt->execute([$departmentId, $levelId, ...$courseIds]);
+            if ((int) $stmt->fetchColumn() !== count($courseIds)) {
+                flash('Selected courses must belong to the chosen department and level.', 'danger');
+                redirect($dashboardBaseUrl . '?panel=campus-setup');
+            }
         }
 
         $pdo->beginTransaction();
@@ -146,8 +157,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$repName, $repEmail, $repStatus, $departmentId, $levelId, $repId]);
                 }
 
-                $stmt = $pdo->prepare('DELETE FROM admin_course_assignments WHERE admin_id = ?');
-                $stmt->execute([$repId]);
+                if ($courseIdsProvided) {
+                    $stmt = $pdo->prepare('DELETE FROM admin_course_assignments WHERE admin_id = ?');
+                    $stmt->execute([$repId]);
+                }
             } else {
                 $passwordHash = password_hash($repPassword, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role, status, department_id, level_id) VALUES (?, ?, ?, "course_rep", ?, ?, ?)');
@@ -155,9 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $repId = (int) $pdo->lastInsertId();
             }
 
-            $stmt = $pdo->prepare('INSERT INTO admin_course_assignments (admin_id, course_id) VALUES (?, ?)');
-            foreach ($courseIds as $courseId) {
-                $stmt->execute([$repId, $courseId]);
+            if ($courseIdsProvided && $courseIds) {
+                $stmt = $pdo->prepare('INSERT INTO admin_course_assignments (admin_id, course_id) VALUES (?, ?)');
+                foreach ($courseIds as $courseId) {
+                    $stmt->execute([$repId, $courseId]);
+                }
             }
 
             $stmt = $pdo->prepare('INSERT INTO audit_logs (admin_id, action, entity, entity_id) VALUES (?, ?, ?, ?)');
@@ -461,6 +476,25 @@ $revenueSql .= ' WHERE o.payment_status = "paid"
 $stmt = $pdo->prepare($revenueSql);
 $stmt->execute($revenueParams);
 $revenueByHandout = $stmt->fetchAll();
+$revenueByCourse = [];
+if (is_super_admin($admin)) {
+    $revenueByCourse = $pdo->query('SELECT
+            COALESCE(d.name, "Unassigned department") AS department_name,
+            COALESCE(l.name, "Unassigned class") AS level_name,
+            COALESCE(c.course_code, o.course_code_snapshot) AS course_code,
+            COALESCE(c.title, o.course_code_snapshot) AS course_title,
+            COUNT(DISTINCT o.handout_id) AS handout_count,
+            COUNT(*) AS paid_count,
+            COALESCE(SUM(o.price_snapshot), 0) AS total_revenue
+        FROM orders o
+        JOIN handouts h ON h.handout_id = o.handout_id
+        LEFT JOIN courses c ON c.course_id = h.course_id
+        LEFT JOIN departments d ON d.department_id = h.department_id
+        LEFT JOIN academic_levels l ON l.level_id = h.level_id
+        WHERE o.payment_status = "paid"
+        GROUP BY d.name, l.name, c.course_code, c.title, o.course_code_snapshot
+        ORDER BY d.name, l.name, c.course_code, o.course_code_snapshot')->fetchAll();
+}
 $dashboardHandoutSql = 'SELECT h.*, c.title AS campus_course_title, d.code AS department_code, l.name AS level_name, COUNT(o.order_id) AS order_count
     FROM handouts h
     LEFT JOIN courses c ON c.course_id = h.course_id
@@ -512,6 +546,16 @@ $courses = $pdo->query('SELECT c.*, d.name AS department_name, d.code AS departm
     JOIN departments d ON d.department_id = c.department_id
     JOIN academic_levels l ON l.level_id = c.level_id
     ORDER BY d.name, l.sort_order, c.course_code')->fetchAll();
+$currentRepScope = null;
+if (!is_super_admin($admin)) {
+    $stmt = $pdo->prepare('SELECT d.name AS department_name, d.code AS department_code, l.name AS level_name
+        FROM admins a
+        LEFT JOIN departments d ON d.department_id = a.department_id
+        LEFT JOIN academic_levels l ON l.level_id = a.level_id
+        WHERE a.admin_id = ?');
+    $stmt->execute([(int) $admin['admin_id']]);
+    $currentRepScope = $stmt->fetch() ?: null;
+}
 $editRepId = is_super_admin($admin) ? (int) ($_GET['rep_id'] ?? 0) : 0;
 $editRep = null;
 $editRepCourseIds = [];
@@ -626,6 +670,10 @@ page_header('Admin Dashboard');
 
             <div class="sidebar-label mt-4"><?= is_super_admin($admin) ? 'Oversight' : 'Course rep tools' ?></div>
             <?php if (!is_super_admin($admin)): ?>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="manage-courses">
+                    <span>Manage courses</span>
+                    <strong><?= count($manageableCourses) ?></strong>
+                </button>
                 <button class="dashboard-nav-item" type="button" data-dashboard-target="manage-handouts">
                     <span>Manage handouts</span>
                     <strong><?= count($dashboardHandouts) ?></strong>
@@ -665,27 +713,59 @@ page_header('Admin Dashboard');
                 <div class="bg-white border rounded-2 p-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                         <div>
-                            <h2 class="h4 mb-1">Revenue by handout</h2>
-                            <p class="text-muted mb-0">Each handout keeps its own revenue total.</p>
+                            <h2 class="h4 mb-1"><?= is_super_admin($admin) ? 'Revenue by course' : 'Revenue by handout' ?></h2>
+                            <p class="text-muted mb-0"><?= is_super_admin($admin) ? 'Verify totals by department, class, and course.' : 'Each handout keeps its own revenue total.' ?></p>
                         </div>
                         <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="view-orders">Open paid list</button>
                     </div>
-                    <div class="row g-3">
-                        <?php foreach ($revenueByHandout as $revenue): ?>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="card dashboard-card revenue-card h-100">
-                                    <div class="card-body">
-                                        <div class="text-muted small"><?= h($revenue['course_code_snapshot']) ?></div>
-                                        <h3 class="h6 mb-3"><?= h($revenue['handout_title_snapshot']) ?></h3>
-                                        <div class="h3 mb-1"><?= money($revenue['total_revenue']) ?></div>
-                                        <div class="text-muted small"><?= (int) $revenue['paid_count'] ?> paid student<?= (int) $revenue['paid_count'] === 1 ? '' : 's' ?></div>
+                    <?php if (is_super_admin($admin)): ?>
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Class</th>
+                                        <th>Course</th>
+                                        <th>Handouts</th>
+                                        <th>Paid students</th>
+                                        <th>Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($revenueByCourse as $revenue): ?>
+                                        <tr>
+                                            <td><?= h($revenue['department_name']) ?></td>
+                                            <td><?= h($revenue['level_name']) ?></td>
+                                            <td><?= h($revenue['course_code']) ?><br><span class="text-muted small"><?= h($revenue['course_title']) ?></span></td>
+                                            <td><?= (int) $revenue['handout_count'] ?></td>
+                                            <td><?= (int) $revenue['paid_count'] ?></td>
+                                            <td class="fw-bold"><?= money($revenue['total_revenue']) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php if (!$revenueByCourse): ?>
+                            <div class="alert alert-info mb-0">No paid revenue has been recorded yet.</div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="row g-3">
+                            <?php foreach ($revenueByHandout as $revenue): ?>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="card dashboard-card revenue-card h-100">
+                                        <div class="card-body">
+                                            <div class="text-muted small"><?= h($revenue['course_code_snapshot']) ?></div>
+                                            <h3 class="h6 mb-3"><?= h($revenue['handout_title_snapshot']) ?></h3>
+                                            <div class="h3 mb-1"><?= money($revenue['total_revenue']) ?></div>
+                                            <div class="text-muted small"><?= (int) $revenue['paid_count'] ?> paid student<?= (int) $revenue['paid_count'] === 1 ? '' : 's' ?></div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <?php if (!$revenueByHandout): ?>
-                        <div class="alert alert-info mb-0">No paid revenue has been recorded yet.</div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php if (!$revenueByHandout): ?>
+                            <div class="alert alert-info mb-0">No paid revenue has been recorded yet.</div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </section>
@@ -861,40 +941,6 @@ page_header('Admin Dashboard');
                                     <button class="btn btn-primary w-100" type="submit">Save level</button>
                                 </form>
 
-                                <form method="post" class="campus-form border rounded-2 p-3">
-                                    <input type="hidden" name="action" value="save_course">
-                                    <h3 class="h5 mb-3">Add official course</h3>
-                                    <div class="mb-3">
-                                        <label class="form-label" for="department_id">Department</label>
-                                        <select class="form-select" id="department_id" name="department_id" required>
-                                            <option value="">Select department</option>
-                                            <?php foreach ($departments as $department): ?>
-                                                <option value="<?= (int) $department['department_id'] ?>"><?= h($department['name']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label" for="level_id">Level</label>
-                                        <select class="form-select" id="level_id" name="level_id" required>
-                                            <option value="">Select level</option>
-                                            <?php foreach ($levels as $level): ?>
-                                                <option value="<?= (int) $level['level_id'] ?>"><?= h($level['name']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-5">
-                                            <label class="form-label" for="campus_course_code">Course code</label>
-                                            <input class="form-control" id="campus_course_code" name="course_code" placeholder="CS201" required>
-                                        </div>
-                                        <div class="col-md-7">
-                                            <label class="form-label" for="course_title">Course title</label>
-                                            <input class="form-control" id="course_title" name="course_title" placeholder="Data Structures" required>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-primary w-100 mt-3" type="submit">Save course</button>
-                                </form>
-
                                 <form method="post" class="campus-form border rounded-2 p-3 mt-4" id="course-rep-form">
                                     <input type="hidden" name="action" value="save_course_rep">
                                     <input type="hidden" name="rep_id" value="<?= (int) ($editRep['admin_id'] ?? 0) ?>">
@@ -946,25 +992,6 @@ page_header('Admin Dashboard');
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="form-label">Courses managed</div>
-                                        <div class="course-assignment-list">
-                                            <?php foreach ($courses as $course): ?>
-                                                <label class="course-assignment-option" data-rep-course-option data-department-id="<?= (int) $course['department_id'] ?>" data-level-id="<?= (int) $course['level_id'] ?>">
-                                                    <input class="form-check-input" type="checkbox" name="course_ids[]" value="<?= (int) $course['course_id'] ?>" <?= in_array((int) $course['course_id'], $editRepCourseIds, true) ? 'checked' : '' ?>>
-                                                    <span>
-                                                        <strong><?= h($course['course_code']) ?></strong>
-                                                        <?= h($course['title']) ?><br>
-                                                        <small><?= h($course['department_code']) ?>, <?= h($course['level_name']) ?></small>
-                                                    </span>
-                                                </label>
-                                            <?php endforeach; ?>
-                                        </div>
-                                        <div class="form-text" data-rep-course-message></div>
-                                        <?php if (!$courses): ?>
-                                            <div class="alert alert-info mt-2 mb-0">Create at least one course before adding a course rep.</div>
-                                        <?php endif; ?>
                                     </div>
                                     <button class="btn btn-primary w-100 mt-3" type="submit"><?= $editRep ? 'Update course rep' : 'Save course rep' ?></button>
                                 </form>
@@ -1090,6 +1117,67 @@ page_header('Admin Dashboard');
             <?php endif; ?>
 
             <?php if (!is_super_admin($admin)): ?>
+            <section class="dashboard-panel" id="dashboard-manage-courses" data-dashboard-panel="manage-courses" hidden>
+                <div class="bg-white border rounded-2 p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">Manage courses</h2>
+                            <p class="text-muted mb-0">Create the courses for your assigned department and class before publishing handouts.</p>
+                        </div>
+                        <?php if ($currentRepScope): ?>
+                            <span class="badge text-bg-secondary align-self-md-start">
+                                <?= h(($currentRepScope['department_code'] ?? 'Department') . ' · ' . ($currentRepScope['level_name'] ?? 'Class')) ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <form method="post" class="campus-form border rounded-2 p-3 mb-4">
+                        <input type="hidden" name="action" value="save_course">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label" for="rep_course_code">Course code</label>
+                                <input class="form-control" id="rep_course_code" name="course_code" placeholder="CS201" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="rep_course_title">Course title</label>
+                                <input class="form-control" id="rep_course_title" name="course_title" placeholder="Data Structures" required>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="submit">Save</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Course</th>
+                                    <th>Department</th>
+                                    <th>Class</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($manageableCourses as $course): ?>
+                                    <tr>
+                                        <td><?= h($course['course_code']) ?></td>
+                                        <td><?= h($course['title']) ?></td>
+                                        <td><?= h($course['department_name']) ?></td>
+                                        <td><?= h($course['level_name']) ?></td>
+                                        <td><?= status_badge($course['status']) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (!$manageableCourses): ?>
+                        <div class="alert alert-info mt-3 mb-0">No courses have been created for this rep yet.</div>
+                    <?php endif; ?>
+                </div>
+            </section>
+
             <section class="dashboard-panel" id="dashboard-manage-handouts" data-dashboard-panel="manage-handouts" hidden>
                 <div class="bg-white border rounded-2 p-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">

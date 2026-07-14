@@ -79,13 +79,15 @@
 - Added auth helper functions for super-admin checks.
 - Added a password show/hide toggle on the admin login form.
 - Added a super-admin Campus setup dashboard panel for departments and levels.
-- Added course creation and course listing to the Campus setup dashboard panel.
-- Added course representative account creation and course assignment in Campus setup.
+- Added course representative course creation and course listing to the dashboard.
+- Added course representative account creation in Campus setup.
 - Connected handout creation and management to official campus course records.
 - Added student-side department, level, and course filtering for available handouts.
 - Added course representative account editing, password reset, assignment updates, and active/inactive status controls.
-- Added department/level filtering for course assignment options in the course representative form.
+- Added department and level fields for scoping course representative accounts.
 - Restricted handout publishing, pricing, and handout management tools to course representatives.
+- Moved course creation from super admin to course representatives.
+- Added super admin revenue oversight by department, class, and course.
 
 ### Checks Performed
 
@@ -99,13 +101,15 @@
 - Verified the Campus setup panel appears for a super admin.
 - Created and removed temporary department and level records through the Campus setup workflow.
 - Created and removed a temporary course through the Campus setup workflow.
-- Created and removed a temporary course representative account with a course assignment through the Campus setup workflow.
+- Created and removed a temporary course representative account through the Campus setup workflow.
 - Created and removed a temporary handout tied to a selected campus course.
 - Created and removed a temporary course representative, then confirmed the handout editor only showed the assigned course.
 - Filtered the public handout list by Computer Science, Level 200, and H001, then confirmed the order page shows the campus course context.
-- Edited a temporary course representative from Campus setup, confirmed status and course assignment updates, and tested password reset behavior.
+- Edited a temporary course representative from Campus setup, confirmed department/class/status updates, and tested password reset behavior.
 - Confirmed the course representative form shows matching course options for Computer Science Level 200 and explains when no courses exist for another department/level.
 - Confirmed super admin no longer sees handout publishing tools and direct handout management pages redirect back to Campus setup.
+- Ran PHP syntax checks for `admin/dashboard.php` after moving course creation to course reps.
+- Checked MySQL `GROUP BY` handling documentation for the super admin revenue table.
 
 ### Next Steps
 

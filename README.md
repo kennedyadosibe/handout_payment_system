@@ -20,8 +20,9 @@ Local accounts after setup:
 - Order form that stores a price snapshot at order time.
 - Test payment screen that simulates gateway success or failure.
 - Receipt lookup by order reference.
-- Admin login, dashboard, handout management, order filters, and collection status updates.
-- Campus foundation tables for departments, levels, courses, super admin, and course representative assignments.
+- Admin login, dashboard, order filters, and collection status updates.
+- Super admin campus setup for departments, levels, course representative accounts, and revenue oversight.
+- Course representative course creation, handout management, pricing, and course-scoped revenue views.
 
 ## Database
 
