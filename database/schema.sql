@@ -52,6 +52,18 @@ CREATE TABLE IF NOT EXISTS admin_course_assignments (
     CONSTRAINT fk_assignments_course FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS admin_password_resets (
+    reset_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    code_hash VARCHAR(255) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_password_resets_admin FOREIGN KEY (admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS handouts (
     handout_id INT AUTO_INCREMENT PRIMARY KEY,
     department_id INT NULL,

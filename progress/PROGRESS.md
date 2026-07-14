@@ -104,6 +104,7 @@
 - Updated the homepage so students start from a department and level finder instead of seeing campus-wide featured handouts.
 - Restyled the homepage student-flow cards with a dedicated blue card design.
 - Restyled the public handouts page with a blue header, filter panel, handout cards, and empty state.
+- Added course representative forgot-password recovery with reset link plus email verification code.
 
 ### Checks Performed
 
@@ -142,7 +143,8 @@
 - Confirmed the homepage routes students into the class-filtered handout flow.
 - Confirmed the homepage student-flow cards render with the updated blue design.
 - Confirmed the handouts page renders the updated blue design for both empty and filtered result states.
+- Added syntax and browser checks for the course representative password reset flow.
 
 ### Next Steps
 
-- Add dynamic dependent filtering so course choices narrow automatically after a student selects department and level.
+- Configure production-grade SMTP delivery before using password reset outside local testing.

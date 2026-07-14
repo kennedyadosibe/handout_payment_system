@@ -37,6 +37,7 @@ page_header('Admin Login');
                     </div>
                 </div>
                 <button class="btn btn-primary w-100" type="submit">Login</button>
+                <a class="btn btn-link w-100 mt-2" href="/Handout%20Payment%20System/admin/forgot-password.php">Forgot password?</a>
             </form>
         </div>
     </div>
