@@ -6,7 +6,7 @@ Groups paid students on the course rep dashboard under the handout they paid for
 
 ## User Flow
 
-Course reps open the dashboard and see `Paid students by handout`. Each handout section shows its course code, handout title, total paid students, total money received, and the students who paid for that handout. Super admins use read-only `View orders` and course revenue checks instead.
+Course reps open the dashboard and see `Paid students by handout`. Each handout section shows its course code, handout title, total paid students, total money received, and the students who paid for that handout. Super admins use course revenue checks instead of student/order lists.
 
 ## Files Changed
 

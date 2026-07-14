@@ -95,6 +95,7 @@
 - Changed super admin revenue so a specific course must be selected before revenue totals are shown.
 - Moved Paid students and Incomplete details dashboard sections out of the super admin dashboard so they remain course-rep tools only.
 - Changed selected-course revenue to start from the course record so a course still displays even when no paid orders exist yet.
+- Removed order-list access from the super admin dashboard and redirected direct super admin orders-page access to revenue verification.
 
 ### Checks Performed
 
@@ -119,11 +120,12 @@
 - Checked MySQL `GROUP BY` handling documentation for the super admin revenue table.
 - Ran PHP syntax checks for `admin/dashboard.php` after removing the level creation form and handler.
 - Ran PHP syntax checks for `setup.php` after adding fixed-level cleanup.
-- Ran PHP syntax checks for `admin/dashboard.php` and `admin/orders/index.php` after making super admin order views read-only.
+- Ran PHP syntax checks for `admin/dashboard.php` and `admin/orders/index.php` after removing super admin order-list access.
 - Ran PHP syntax checks for `admin/dashboard.php` after adding super admin revenue filters.
 - Ran PHP syntax checks for `admin/dashboard.php` after requiring course-level revenue lookup.
 - Ran PHP syntax checks for `admin/dashboard.php` after hiding Paid students and Incomplete details from super admins.
 - Ran PHP syntax checks for `admin/dashboard.php` after making selected-course revenue resilient to empty paid orders.
+- Ran PHP syntax checks for `admin/dashboard.php` and `admin/orders/index.php` after making View orders course-rep only.
 
 ### Next Steps
 

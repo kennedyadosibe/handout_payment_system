@@ -8,7 +8,7 @@ Keeps incomplete payment details recorded in the database while ensuring the adm
 
 Students who start an order still have their details saved. If they do not complete payment, they do not appear on the admin paid list.
 
-Admins open `Paid list` from the dashboard to see only paid students. The list can still be filtered by handout, and paid summary cards still group paid students by course handout.
+Course reps open `Paid list` from the dashboard to see only paid students for their assigned courses. The list can still be filtered by handout, and paid summary cards still group paid students by course handout. Super admins do not use the paid list.
 
 ## Files Changed
 

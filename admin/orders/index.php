@@ -5,12 +5,12 @@ require_once __DIR__ . '/../../app/layout.php';
 
 $admin = require_admin();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (is_super_admin($admin)) {
-        flash('Super admins can view paid orders, but only course reps can alter them.', 'warning');
-        redirect('/Handout%20Payment%20System/admin/orders/index.php');
-    }
+if (is_super_admin($admin)) {
+    flash('Order lists are managed by course reps. Use Revenue to verify course totals.', 'warning');
+    redirect('/Handout%20Payment%20System/admin/dashboard.php?panel=revenue');
+}
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'update_collection';
     $orderId = (int) ($_POST['order_id'] ?? 0);
 

@@ -688,10 +688,12 @@ page_header('Admin Dashboard');
                     <span><?= $editHandoutId ? 'Edit handout' : 'Add handout' ?></span>
                 </button>
             <?php endif; ?>
-            <button class="dashboard-nav-item" type="button" data-dashboard-target="view-orders">
-                <span>View orders</span>
-                <strong><?= count($dashboardOrders) ?></strong>
-            </button>
+            <?php if (!is_super_admin($admin)): ?>
+                <button class="dashboard-nav-item" type="button" data-dashboard-target="view-orders">
+                    <span>View orders</span>
+                    <strong><?= count($dashboardOrders) ?></strong>
+                </button>
+            <?php endif; ?>
         </aside>
 
         <div class="dashboard-content">
@@ -734,7 +736,9 @@ page_header('Admin Dashboard');
                             <h2 class="h4 mb-1"><?= is_super_admin($admin) ? 'Revenue by course' : 'Revenue by handout' ?></h2>
                             <p class="text-muted mb-0"><?= is_super_admin($admin) ? 'Select a course to verify its paid revenue.' : 'Each handout keeps its own revenue total.' ?></p>
                         </div>
-                        <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="view-orders">Open paid list</button>
+                        <?php if (!is_super_admin($admin)): ?>
+                            <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="view-orders">Open paid list</button>
+                        <?php endif; ?>
                     </div>
                     <?php if (is_super_admin($admin)): ?>
                         <form class="campus-form border rounded-2 p-3 mb-4" method="get" data-revenue-filter-form>
@@ -1355,16 +1359,15 @@ page_header('Admin Dashboard');
             </section>
             <?php endif; ?>
 
+            <?php if (!is_super_admin($admin)): ?>
             <section class="dashboard-panel" id="dashboard-view-orders" data-dashboard-panel="view-orders" hidden>
                 <div class="bg-white border rounded-2 p-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                         <div>
                             <h2 class="h4 mb-1">View orders</h2>
-                            <p class="text-muted mb-0"><?= is_super_admin($admin) ? 'Only paid students appear here. Super admins can review orders, while course reps update collection status or remove paid records.' : 'Only paid students appear here. Use this list to update collection status or remove a paid record.' ?></p>
+                            <p class="text-muted mb-0">Only paid students appear here. Use this list to update collection status or remove a paid record.</p>
                         </div>
-                        <?php if (!is_super_admin($admin)): ?>
-                            <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="paid-students">Grouped paid lists</button>
-                        <?php endif; ?>
+                        <button class="btn btn-sm btn-outline-primary align-self-md-start" type="button" data-dashboard-target="paid-students">Grouped paid lists</button>
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
@@ -1390,31 +1393,25 @@ page_header('Admin Dashboard');
                                         <td><?= h($order['course_code_snapshot']) ?><br><span class="text-muted small"><?= h($order['handout_title_snapshot']) ?></span></td>
                                         <td><?= money($order['price_snapshot']) ?></td>
                                         <td>
-                                            <?php if (is_super_admin($admin)): ?>
-                                                <?= status_badge($order['collection_status']) ?>
-                                            <?php else: ?>
-                                                <form method="post" class="d-flex gap-2">
-                                                    <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
-                                                    <input type="hidden" name="action" value="update_collection">
-                                                    <input type="hidden" name="return_panel" value="view-orders">
-                                                    <select class="form-select form-select-sm" name="collection_status">
-                                                        <?php foreach (['not_ready', 'ready_for_collection', 'collected'] as $status): ?>
-                                                            <option value="<?= h($status) ?>" <?= $order['collection_status'] === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                    <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
-                                                </form>
-                                            <?php endif; ?>
+                                            <form method="post" class="d-flex gap-2">
+                                                <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                                <input type="hidden" name="action" value="update_collection">
+                                                <input type="hidden" name="return_panel" value="view-orders">
+                                                <select class="form-select form-select-sm" name="collection_status">
+                                                    <?php foreach (['not_ready', 'ready_for_collection', 'collected'] as $status): ?>
+                                                        <option value="<?= h($status) ?>" <?= $order['collection_status'] === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
+                                            </form>
                                         </td>
-                                        <?php if (!is_super_admin($admin)): ?>
-                                            <td class="text-end">
-                                                <form method="post" onsubmit="return confirm('Delete this student from the paid list after giving the handout?');">
-                                                    <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
-                                                    <input type="hidden" name="return_panel" value="view-orders">
-                                                    <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
-                                                </form>
-                                            </td>
-                                        <?php endif; ?>
+                                        <td class="text-end">
+                                            <form method="post" onsubmit="return confirm('Delete this student from the paid list after giving the handout?');">
+                                                <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                                <input type="hidden" name="return_panel" value="view-orders">
+                                                <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -1425,6 +1422,7 @@ page_header('Admin Dashboard');
                     <?php endif; ?>
                 </div>
             </section>
+            <?php endif; ?>
         </div>
     </div>
 </main>
