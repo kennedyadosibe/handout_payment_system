@@ -44,31 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($dashboardBaseUrl . '?panel=campus-setup');
     }
 
-    if ($action === 'save_level') {
-        if (!is_super_admin($admin)) {
-            flash('Super admin access is required.', 'warning');
-            redirect($dashboardBaseUrl . '?panel=overview');
-        }
-
-        $levelName = trim($_POST['level_name'] ?? '');
-        $sortOrder = (int) ($_POST['sort_order'] ?? 0);
-
-        if ($levelName === '') {
-            flash('Level name is required.', 'danger');
-            redirect($dashboardBaseUrl . '?panel=campus-setup');
-        }
-
-        try {
-            $stmt = $pdo->prepare('INSERT INTO academic_levels (name, sort_order) VALUES (?, ?)');
-            $stmt->execute([$levelName, $sortOrder]);
-            flash('Level added.');
-        } catch (Throwable $exception) {
-            flash('Level could not be added. Check that the name is unique.', 'danger');
-        }
-
-        redirect($dashboardBaseUrl . '?panel=campus-setup');
-    }
-
     if ($action === 'save_course') {
         if (is_super_admin($admin)) {
             flash('Course representatives are responsible for creating their courses.', 'warning');
@@ -925,20 +900,6 @@ page_header('Admin Dashboard');
                                         <input class="form-control" id="department_code" name="department_code" placeholder="CS" required>
                                     </div>
                                     <button class="btn btn-primary w-100" type="submit">Save department</button>
-                                </form>
-
-                                <form method="post" class="campus-form border rounded-2 p-3 mb-4">
-                                    <input type="hidden" name="action" value="save_level">
-                                    <h3 class="h5 mb-3">Add level</h3>
-                                    <div class="mb-3">
-                                        <label class="form-label" for="level_name">Level name</label>
-                                        <input class="form-control" id="level_name" name="level_name" placeholder="Level 200" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label" for="sort_order">Sort order</label>
-                                        <input class="form-control" id="sort_order" name="sort_order" type="number" value="0">
-                                    </div>
-                                    <button class="btn btn-primary w-100" type="submit">Save level</button>
                                 </form>
 
                                 <form method="post" class="campus-form border rounded-2 p-3 mt-4" id="course-rep-form">

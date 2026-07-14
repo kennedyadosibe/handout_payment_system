@@ -88,6 +88,8 @@
 - Restricted handout publishing, pricing, and handout management tools to course representatives.
 - Moved course creation from super admin to course representatives.
 - Added super admin revenue oversight by department, class, and course.
+- Removed level creation from the super admin dashboard because the system uses fixed Level 100, Level 200, Level 300, and Level 400 records.
+- Added setup cleanup for unused non-standard level records from older local setup runs.
 
 ### Checks Performed
 
@@ -99,7 +101,7 @@
 - Verified the password toggle changes the field between hidden and visible states.
 - Ran PHP syntax checks for `admin/dashboard.php`.
 - Verified the Campus setup panel appears for a super admin.
-- Created and removed temporary department and level records through the Campus setup workflow.
+- Created and removed a temporary department through the Campus setup workflow and confirmed fixed level records were available for rep assignment.
 - Created and removed a temporary course through the Campus setup workflow.
 - Created and removed a temporary course representative account through the Campus setup workflow.
 - Created and removed a temporary handout tied to a selected campus course.
@@ -110,6 +112,8 @@
 - Confirmed super admin no longer sees handout publishing tools and direct handout management pages redirect back to Campus setup.
 - Ran PHP syntax checks for `admin/dashboard.php` after moving course creation to course reps.
 - Checked MySQL `GROUP BY` handling documentation for the super admin revenue table.
+- Ran PHP syntax checks for `admin/dashboard.php` after removing the level creation form and handler.
+- Ran PHP syntax checks for `setup.php` after adding fixed-level cleanup.
 
 ### Next Steps
 

@@ -89,6 +89,17 @@ $stmt = $db->prepare('INSERT INTO academic_levels (name, sort_order)
 foreach ($levels as $level) {
     $stmt->execute([$level[0], $level[1], $level[0]]);
 }
+$fixedLevelNames = array_column($levels, 0);
+$fixedLevelPlaceholders = implode(',', array_fill(0, count($fixedLevelNames), '?'));
+$stmt = $db->prepare("DELETE l FROM academic_levels l
+    LEFT JOIN admins a ON a.level_id = l.level_id
+    LEFT JOIN courses c ON c.level_id = l.level_id
+    LEFT JOIN handouts h ON h.level_id = l.level_id
+    WHERE l.name NOT IN ($fixedLevelPlaceholders)
+        AND a.admin_id IS NULL
+        AND c.course_id IS NULL
+        AND h.handout_id IS NULL");
+$stmt->execute($fixedLevelNames);
 
 $departmentId = (int) $db->query("SELECT department_id FROM departments WHERE code = 'CS' LIMIT 1")->fetchColumn();
 $levelId = (int) $db->query("SELECT level_id FROM academic_levels WHERE name = 'Level 200' LIMIT 1")->fetchColumn();

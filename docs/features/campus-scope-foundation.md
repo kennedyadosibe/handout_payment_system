@@ -9,7 +9,7 @@ This is the first step toward making the system work for a whole campus instead 
 - `super.user@example.test` is seeded as the local `super_admin`.
 - `course.rep@example.test` is seeded as a local `course_rep`.
 - Departments are stored in `departments`.
-- Levels are stored in `academic_levels`.
+- Fixed levels are stored in `academic_levels`: Level 100, Level 200, Level 300, and Level 400.
 - Courses are stored in `courses`.
 - Course representative course ownership will be stored in `admin_course_assignments`.
 - Handouts can now be linked to department, level, and course records.
@@ -26,7 +26,7 @@ Existing handouts still work because the new campus scope fields are nullable. T
 
 ## Setup Notes
 
-Run `setup.php` after pulling this feature. It creates or upgrades the campus foundation tables and sets the local super admin and course representative accounts.
+Run `setup.php` after pulling this feature. It creates or upgrades the campus foundation tables, seeds the four fixed levels, removes unused non-standard levels, and sets the local super admin and course representative accounts.
 
 ## Official Documentation Checked
 

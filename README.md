@@ -21,7 +21,7 @@ Local accounts after setup:
 - Test payment screen that simulates gateway success or failure.
 - Receipt lookup by order reference.
 - Admin login, dashboard, order filters, and collection status updates.
-- Super admin campus setup for departments, levels, course representative accounts, and revenue oversight.
+- Super admin campus setup for departments, fixed levels, course representative accounts, and revenue oversight.
 - Course representative course creation, handout management, pricing, and course-scoped revenue views.
 
 ## Database
