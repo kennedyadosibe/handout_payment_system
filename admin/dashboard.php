@@ -483,30 +483,22 @@ $hasRevenueCourseFilter = $revenueCourseFilters['course_id'] > 0;
 $revenueByCourseTotal = 0.0;
 if (is_super_admin($admin) && $hasRevenueCourseFilter) {
     $revenueByCourseSql = 'SELECT
-            COALESCE(d.name, "Unassigned department") AS department_name,
-            COALESCE(l.name, "Unassigned class") AS level_name,
-            COALESCE(c.course_code, o.course_code_snapshot) AS course_code,
-            COALESCE(c.title, o.course_code_snapshot) AS course_title,
-            COUNT(DISTINCT o.handout_id) AS handout_count,
-            COUNT(*) AS paid_count,
+            d.name AS department_name,
+            l.name AS level_name,
+            c.course_code AS course_code,
+            c.title AS course_title,
+            COUNT(DISTINCT h.handout_id) AS handout_count,
+            COUNT(o.order_id) AS paid_count,
             COALESCE(SUM(o.price_snapshot), 0) AS total_revenue
-        FROM orders o
-        JOIN handouts h ON h.handout_id = o.handout_id
-        LEFT JOIN courses c ON c.course_id = h.course_id
-        LEFT JOIN departments d ON d.department_id = h.department_id
-        LEFT JOIN academic_levels l ON l.level_id = h.level_id
-        WHERE o.payment_status = "paid" AND h.course_id = ?';
+        FROM courses c
+        JOIN departments d ON d.department_id = c.department_id
+        JOIN academic_levels l ON l.level_id = c.level_id
+        LEFT JOIN handouts h ON h.course_id = c.course_id
+        LEFT JOIN orders o ON o.handout_id = h.handout_id AND o.payment_status = "paid"
+        WHERE c.course_id = ?';
     $revenueByCourseParams = [$revenueCourseFilters['course_id']];
-    if ($revenueCourseFilters['department_id'] > 0) {
-        $revenueByCourseSql .= ' AND h.department_id = ?';
-        $revenueByCourseParams[] = $revenueCourseFilters['department_id'];
-    }
-    if ($revenueCourseFilters['level_id'] > 0) {
-        $revenueByCourseSql .= ' AND h.level_id = ?';
-        $revenueByCourseParams[] = $revenueCourseFilters['level_id'];
-    }
-    $revenueByCourseSql .= ' GROUP BY d.name, l.name, c.course_code, c.title, o.course_code_snapshot
-        ORDER BY d.name, l.name, c.course_code, o.course_code_snapshot';
+    $revenueByCourseSql .= ' GROUP BY d.name, l.name, c.course_code, c.title
+        ORDER BY d.name, l.name, c.course_code';
     $stmt = $pdo->prepare($revenueByCourseSql);
     $stmt->execute($revenueByCourseParams);
     $revenueByCourse = $stmt->fetchAll();

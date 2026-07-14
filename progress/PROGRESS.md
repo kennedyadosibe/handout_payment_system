@@ -94,6 +94,7 @@
 - Added super admin revenue filters for department, level, and course with a filtered total.
 - Changed super admin revenue so a specific course must be selected before revenue totals are shown.
 - Moved Paid students and Incomplete details dashboard sections out of the super admin dashboard so they remain course-rep tools only.
+- Changed selected-course revenue to start from the course record so a course still displays even when no paid orders exist yet.
 
 ### Checks Performed
 
@@ -122,6 +123,7 @@
 - Ran PHP syntax checks for `admin/dashboard.php` after adding super admin revenue filters.
 - Ran PHP syntax checks for `admin/dashboard.php` after requiring course-level revenue lookup.
 - Ran PHP syntax checks for `admin/dashboard.php` after hiding Paid students and Incomplete details from super admins.
+- Ran PHP syntax checks for `admin/dashboard.php` after making selected-course revenue resilient to empty paid orders.
 
 ### Next Steps
 

@@ -21,11 +21,12 @@ Super admins can verify revenue by department, class, and course without managin
 
 ## Database Notes
 
-The revenue table reads paid orders only:
+The revenue table starts from the selected course and joins paid orders:
 
 - `orders.payment_status = "paid"`
 - `orders.price_snapshot` is summed so historical revenue is not changed by later handout price edits.
-- `handouts.department_id`, `handouts.level_id`, and `handouts.course_id` provide the campus grouping.
+- `courses.department_id`, `courses.level_id`, and `courses.course_id` provide the campus grouping.
+- A selected course still appears with GHS 0.00 when no paid orders have been recorded yet.
 
 The filter submits these query parameters:
 
@@ -47,5 +48,6 @@ The filter submits these query parameters:
 - Confirm super admins must select a course before revenue is shown.
 - Confirm department and level narrow the course list.
 - Confirm the course total changes with the selected course.
+- Confirm a course with no paid orders still shows a zero-revenue row.
 - Confirm course representatives still see `Revenue by handout`.
 - Confirm super admins do not see course creation controls.
