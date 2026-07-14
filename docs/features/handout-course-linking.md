@@ -37,7 +37,7 @@ Existing order snapshots are not rewritten when a handout course changes. Paid a
 
 Course representatives only receive course options from `admin_course_assignments`. Creating a course automatically assigns it to the logged-in representative. Their handout lists, paid lists, revenue cards, incomplete details, and collection actions are scoped to those assigned courses.
 
-Super admins manage campus setup and course representative accounts. They do not create courses, publish handouts, or set handout prices.
+Super admins manage campus setup and course representative accounts. They do not create courses, publish handouts, set handout prices, or alter paid orders.
 
 ## Official Documentation Checked
 

@@ -8,8 +8,10 @@
 
 1. Admin opens the dashboard.
 2. Admin clicks `Manage handouts` in the sidebar to view handouts, edit handouts, delete unused handouts, or archive handouts with orders.
-3. Admin clicks `View orders` in the sidebar to view paid orders, update collection status, or delete a paid record.
-4. After dashboard form actions, the admin is returned to the same dashboard panel.
+3. Admin clicks `View orders` in the sidebar to view paid orders.
+4. Course reps can update collection status or delete paid records for their assigned courses.
+5. Super admins can review orders only; edit and delete controls are hidden and POST actions are blocked.
+6. After dashboard form actions, the admin is returned to the same dashboard panel.
 
 ## Changed Files
 
@@ -27,3 +29,4 @@
 - Verified `Manage handouts` opens as a dashboard panel.
 - Verified `View orders` opens as a dashboard panel.
 - Verified only the selected dashboard panel is visible after each sidebar click.
+- Verified super admins see `View orders` as read-only.

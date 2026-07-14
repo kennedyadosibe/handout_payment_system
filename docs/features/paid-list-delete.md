@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Allows an admin to delete a paid student from the Orders list after the physical handout has been given.
+Allows a course representative to delete a paid student from the Orders list after the physical handout has been given.
 
 ## User Flow
 
-Admins open `Orders` from the dashboard. Paid orders show a `Delete` button. When confirmed, the student's paid order is removed from the list.
+Course reps open `Orders` from the dashboard. Paid orders for their assigned courses show a `Delete` button. When confirmed, the student's paid order is removed from the list. Super admins can view the list but cannot delete paid orders.
 
 ## Files Changed
 
@@ -14,7 +14,7 @@ Admins open `Orders` from the dashboard. Paid orders show a `Delete` button. Whe
 
 ## Testing Notes
 
-The delete action is limited to paid orders. It deletes the related payment record first, then the order record, and writes an audit log entry.
+The delete action is limited to paid orders and course reps. It deletes the related payment record first, then the order record, and writes an audit log entry. Super admin POST attempts are rejected.
 
 Official PHP PDO documentation was checked for prepared statements and transaction behavior:
 

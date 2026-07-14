@@ -6,6 +6,11 @@ require_once __DIR__ . '/../../app/layout.php';
 $admin = require_admin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (is_super_admin($admin)) {
+        flash('Super admins can view paid orders, but only course reps can alter them.', 'warning');
+        redirect('/Handout%20Payment%20System/admin/orders/index.php');
+    }
+
     $action = $_POST['action'] ?? 'update_collection';
     $orderId = (int) ($_POST['order_id'] ?? 0);
 
@@ -27,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Only paid students can be deleted from the paid list.', 'warning');
             redirect('/Handout%20Payment%20System/admin/orders/index.php');
         }
-        if (!is_super_admin($admin) && !manageable_course_for_admin($admin, (int) $order['course_id'])) {
+        if (!manageable_course_for_admin($admin, (int) $order['course_id'])) {
             flash('You can only update orders for your assigned courses.', 'warning');
             redirect('/Handout%20Payment%20System/admin/orders/index.php');
         }
@@ -66,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         WHERE o.order_id = ? AND o.payment_status = "paid"');
     $stmt->execute([$orderId]);
     $orderCourseId = (int) $stmt->fetchColumn();
-    if ($orderCourseId <= 0 || (!is_super_admin($admin) && !manageable_course_for_admin($admin, $orderCourseId))) {
+    if ($orderCourseId <= 0 || !manageable_course_for_admin($admin, $orderCourseId)) {
         flash('You can only update orders for your assigned courses.', 'warning');
         redirect('/Handout%20Payment%20System/admin/orders/index.php');
     }
@@ -147,7 +152,7 @@ page_header('Orders');
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h2 mb-1">Paid list</h1>
-            <p class="text-muted mb-0">Only students who have paid appear here. Incomplete payment details are still saved separately.</p>
+                        <p class="text-muted mb-0"><?= is_super_admin($admin) ? 'Only students who have paid appear here. Super admins can review orders, while course reps manage collection updates.' : 'Only students who have paid appear here. Incomplete payment details are still saved separately.' ?></p>
         </div>
         <a class="btn btn-outline-primary" href="/Handout%20Payment%20System/admin/dashboard.php">Dashboard</a>
     </div>
@@ -218,7 +223,9 @@ page_header('Orders');
                         <th>Handout</th>
                         <th>Amount</th>
                         <th>Collection</th>
-                        <th></th>
+                        <?php if (!is_super_admin($admin)): ?>
+                            <th></th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -230,23 +237,29 @@ page_header('Orders');
                             <td><?= h($order['course_code_snapshot']) ?><br><span class="text-muted small"><?= h($order['handout_title_snapshot']) ?></span></td>
                             <td><?= money($order['price_snapshot']) ?></td>
                             <td>
-                                <form method="post" class="d-flex gap-2">
-                                    <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
-                                    <input type="hidden" name="action" value="update_collection">
-                                    <select class="form-select form-select-sm" name="collection_status">
-                                        <?php foreach (['not_ready', 'ready_for_collection', 'collected'] as $status): ?>
-                                            <option value="<?= h($status) ?>" <?= $order['collection_status'] === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
-                                </form>
+                                <?php if (is_super_admin($admin)): ?>
+                                    <?= status_badge($order['collection_status']) ?>
+                                <?php else: ?>
+                                    <form method="post" class="d-flex gap-2">
+                                        <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                        <input type="hidden" name="action" value="update_collection">
+                                        <select class="form-select form-select-sm" name="collection_status">
+                                            <?php foreach (['not_ready', 'ready_for_collection', 'collected'] as $status): ?>
+                                                <option value="<?= h($status) ?>" <?= $order['collection_status'] === $status ? 'selected' : '' ?>><?= h(str_replace('_', ' ', $status)) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
+                                    </form>
+                                <?php endif; ?>
                             </td>
-                            <td class="text-end">
-                                <form method="post" onsubmit="return confirm('Delete this student from the paid list after giving the handout?');">
-                                    <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
-                                    <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
-                                </form>
-                            </td>
+                            <?php if (!is_super_admin($admin)): ?>
+                                <td class="text-end">
+                                    <form method="post" onsubmit="return confirm('Delete this student from the paid list after giving the handout?');">
+                                        <input type="hidden" name="order_id" value="<?= (int) $order['order_id'] ?>">
+                                        <button class="btn btn-sm btn-outline-danger" name="action" value="delete_paid_order" type="submit">Delete</button>
+                                    </form>
+                                </td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

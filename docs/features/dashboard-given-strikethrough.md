@@ -2,13 +2,15 @@
 
 ## Purpose
 
-Allows admins to mark a paid student as having received the physical handout without deleting the payment/order record or reducing revenue.
+Allows course reps to mark a paid student as having received the physical handout without deleting the payment/order record or reducing revenue.
 
 ## User Flow
 
-Admins open the dashboard and click `Given` beside a paid student. The row remains under that handout section, but it is struck through to show the handout has been given.
+Course reps open the dashboard and click `Given` beside a paid student in one of their assigned course handout lists. The row remains under that handout section, but it is struck through to show the handout has been given.
 
 `Delete` still removes the order and payment record. `Given` should be used when the admin wants to keep revenue and history.
+
+Super admins can view paid students and collection status, but they do not see `Given` or `Delete` controls.
 
 ## Files Changed
 
