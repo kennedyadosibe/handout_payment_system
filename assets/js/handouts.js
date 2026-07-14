@@ -24,6 +24,7 @@
             var matchesLevel = levelId === '' || option.dataset.levelId === levelId;
             var isVisible = matchesDepartment && matchesLevel;
             option.hidden = !isVisible;
+            option.disabled = !isVisible;
 
             if (isVisible) {
                 visibleCount += 1;
@@ -36,6 +37,7 @@
         if (!selectedStillVisible) {
             courseSelect.value = '';
         }
+        courseSelect.disabled = (departmentId !== '' || levelId !== '') && visibleCount === 0;
 
         if (message) {
             if (departmentId === '' && levelId === '') {

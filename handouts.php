@@ -17,6 +17,21 @@ $selectedDepartmentId = (int) ($_GET['department_id'] ?? 0);
 $selectedLevelId = (int) ($_GET['level_id'] ?? 0);
 $selectedCourseId = (int) ($_GET['course_id'] ?? 0);
 $hasClassFilter = $selectedDepartmentId > 0 || $selectedLevelId > 0 || $selectedCourseId > 0;
+$courseOptions = array_values(array_filter($courses, function (array $course) use ($selectedDepartmentId, $selectedLevelId): bool {
+    $matchesDepartment = $selectedDepartmentId <= 0 || (int) $course['department_id'] === $selectedDepartmentId;
+    $matchesLevel = $selectedLevelId <= 0 || (int) $course['level_id'] === $selectedLevelId;
+    return $matchesDepartment && $matchesLevel;
+}));
+$selectedCourseIsAvailable = $selectedCourseId <= 0;
+foreach ($courseOptions as $course) {
+    if ((int) $course['course_id'] === $selectedCourseId) {
+        $selectedCourseIsAvailable = true;
+        break;
+    }
+}
+if (!$selectedCourseIsAvailable) {
+    $selectedCourseId = 0;
+}
 
 $sql = 'SELECT h.*, c.title AS campus_course_title, d.name AS department_name, d.code AS department_code, l.name AS level_name
     FROM handouts h
@@ -78,9 +93,9 @@ page_header('Available Handouts', 'handouts');
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="course_id">Course</label>
-                <select class="form-select" id="course_id" name="course_id" data-handout-course>
-                    <option value="">All courses</option>
-                    <?php foreach ($courses as $course): ?>
+                <select class="form-select" id="course_id" name="course_id" data-handout-course <?= $hasClassFilter && !$courseOptions ? 'disabled' : '' ?>>
+                    <option value=""><?= $hasClassFilter && !$courseOptions ? 'No courses available' : 'All courses' ?></option>
+                    <?php foreach ($courseOptions as $course): ?>
                         <option value="<?= (int) $course['course_id'] ?>" data-department-id="<?= (int) $course['department_id'] ?>" data-level-id="<?= (int) $course['level_id'] ?>" <?= $selectedCourseId === (int) $course['course_id'] ? 'selected' : '' ?>>
                             <?= h($course['course_code'] . ' - ' . $course['title'] . ' (' . $course['department_code'] . ', ' . $course['level_name'] . ')') ?>
                         </option>

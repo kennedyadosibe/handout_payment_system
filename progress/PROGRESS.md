@@ -98,6 +98,7 @@
 - Removed order-list access from the super admin dashboard and redirected direct super admin orders-page access to revenue verification.
 - Added a dedicated super admin Course reps panel listing every representative account with edit/password-reset entry points.
 - Tightened public handout filtering so selected department/level scopes never fall back to showing other class handouts.
+- Tightened the public course dropdown so selected department/level scopes do not show courses from other classes.
 
 ### Checks Performed
 
@@ -130,6 +131,7 @@
 - Ran PHP syntax checks for `admin/dashboard.php` and `admin/orders/index.php` after making View orders course-rep only.
 - Ran PHP syntax checks for `admin/dashboard.php` after adding the super admin Course reps panel.
 - Ran PHP syntax checks for `handouts.php` and JavaScript syntax checks for `assets/js/handouts.js` after tightening public class filtering.
+- Browser-tested an empty department/level and confirmed the course dropdown does not show unrelated courses.
 
 ### Next Steps
 
