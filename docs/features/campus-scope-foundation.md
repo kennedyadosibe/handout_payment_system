@@ -6,8 +6,9 @@ This is the first step toward making the system work for a whole campus instead 
 
 ## How It Works
 
-- `super.user@example.test` is seeded as the local `super_admin`.
-- `course.rep@example.test` is seeded as a local `course_rep`.
+- `super.user@example.test` is seeded as the local placeholder `super_admin`.
+- `course.rep@example.test` is seeded as a local placeholder `course_rep`.
+- Placeholder passwords are for local setup only and should be changed immediately.
 - Departments are stored in `departments`.
 - Fixed levels are stored in `academic_levels`: Level 100, Level 200, Level 300, and Level 400.
 - Courses are stored in `courses`.
@@ -39,5 +40,5 @@ Run `setup.php` after pulling this feature. It creates or upgrades the campus fo
 - Ran `setup.php` locally.
 - Verified the new campus tables exist.
 - Verified `admins` and `handouts` have the new scope columns.
-- Verified `super.user@example.test` is a `super_admin`.
-- Verified `course.rep@example.test` is a `course_rep`.
+- Verified the placeholder super admin account is a `super_admin`.
+- Verified the placeholder course representative account is a `course_rep`.

@@ -22,7 +22,7 @@ page_header('Admin Login');
         <div class="col-md-5">
             <form method="post" class="bg-white border rounded-2 p-4">
                 <h1 class="h3">Admin login</h1>
-                <p class="text-muted">Super admin: super.user@example.test. Course rep: course.rep@example.test.</p>
+                <p class="text-muted">Use the account details created by the super admin.</p>
                 <div class="mb-3">
                     <label class="form-label" for="email">Email</label>
                     <input class="form-control" id="email" type="email" name="email" required>

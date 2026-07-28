@@ -75,7 +75,7 @@
 ### Completed
 
 - Added the campus scope database foundation for departments, academic levels, courses, and course representative assignments.
-- Set `super.user@example.test` as the local `super_admin` and `course.rep@example.test` as the local `course_rep`.
+- Set placeholder local accounts for the `super_admin` and `course_rep` seed users.
 - Added auth helper functions for super-admin checks.
 - Added a password show/hide toggle on the admin login form.
 - Added a super-admin Campus setup dashboard panel for departments and levels.
@@ -105,13 +105,14 @@
 - Restyled the homepage student-flow cards with a dedicated blue card design.
 - Restyled the public handouts page with a blue header, filter panel, handout cards, and empty state.
 - Added course representative forgot-password recovery with reset link plus email verification code.
+- Removed exposed admin credentials from setup instructions, seed data, login copy, and documentation.
 
 ### Checks Performed
 
 - Ran PHP syntax checks for `setup.php`, `app/auth.php`, and `admin/login.php`.
 - Ran `setup.php` locally and verified the new campus tables and scope columns were created.
-- Confirmed `super.user@example.test` logs in as `super_admin`.
-- Confirmed `course.rep@example.test` logs in as `course_rep`.
+- Confirmed the placeholder super admin account logs in as `super_admin`.
+- Confirmed the placeholder course representative account logs in as `course_rep`.
 - Ran PHP syntax checks for `admin/login.php`.
 - Verified the password toggle changes the field between hidden and visible states.
 - Ran PHP syntax checks for `admin/dashboard.php`.
@@ -144,7 +145,8 @@
 - Confirmed the homepage student-flow cards render with the updated blue design.
 - Confirmed the handouts page renders the updated blue design for both empty and filtered result states.
 - Added syntax and browser checks for the course representative password reset flow.
+- Rotated local seeded admin passwords to placeholder values and confirmed the exposed strings no longer appear in the working tree.
 
 ### Next Steps
 
-- Configure production-grade SMTP delivery before using password reset outside local testing.
+- Rewrite Git history and force-push cleaned branches so exposed credentials are removed from previous commits.

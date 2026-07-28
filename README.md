@@ -11,8 +11,10 @@ PHP/MySQL MVP for managing physical handout orders, test payments, and collectio
 
 Local accounts after setup:
 
-- Super admin: `super.user@example.test` / `change-me-super-admin`
-- Course rep: `course.rep@example.test` / `change-me-course-rep`
+- Super admin placeholder: `super.user@example.test` / `change-me-super-admin`
+- Course rep placeholder: `course.rep@example.test` / `change-me-course-rep`
+
+Change these placeholder credentials immediately after local setup. Do not commit real production admin emails or passwords.
 
 ## Main Features
 

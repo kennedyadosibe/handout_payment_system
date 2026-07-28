@@ -177,8 +177,8 @@ $stmt->execute([$courseRepId, $departmentId, $levelId]);
         <h1 class="h3">Setup complete</h1>
         <p class="text-muted">The database, campus foundation, sample handouts and local admin accounts are ready.</p>
         <div class="alert alert-info">
-            <strong>Super admin:</strong> super.user@example.test / change-me-super-admin<br>
-            <strong>Course rep:</strong> course.rep@example.test / change-me-course-rep
+            <strong>Super admin placeholder:</strong> super.user@example.test / change-me-super-admin<br>
+            <strong>Course rep placeholder:</strong> course.rep@example.test / change-me-course-rep
         </div>
         <a class="btn btn-primary" href="/Handout%20Payment%20System/">Open Website</a>
         <a class="btn btn-outline-primary" href="/Handout%20Payment%20System/admin/login.php">Admin Login</a>

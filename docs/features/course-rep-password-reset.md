@@ -53,7 +53,7 @@ Before production use, configure a real mail provider or SMTP delivery path and 
 ## Testing Notes
 
 - Run PHP syntax checks for the changed auth, mailer, setup, login, forgot-password, and reset-password files.
-- Request a reset for `course.rep@example.test`.
+- Request a reset for the placeholder course representative email.
 - Confirm the page gives a generic success message.
 - Confirm `runtime/mail.log` contains the reset link and verification code in local testing.
 - Confirm an invalid code does not reset the password.
